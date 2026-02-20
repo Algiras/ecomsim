@@ -31,6 +31,50 @@ export const NARRATION_SCRIPTS = {
   ubi_effect:
     "Universal Basic Income is reducing poverty. Some residents are using the security to start new businesses.",
 
+  // Weird Law activations
+  policy_fourDayWeek_on:
+    "The four-day work week is now law. Workers rejoice. Friday afternoons are sacred. Economists nervously check productivity spreadsheets.",
+  policy_fourDayWeek_off:
+    "The four-day work week has been repealed. Monday through Friday, back to the grind.",
+  policy_robotTax_on:
+    "A robot tax has been introduced. For every job automated away, the tech sector must pay. Silicon Valley is not pleased.",
+  policy_breadAndCircuses_on:
+    "Bread and circuses for all! The government is handing out free food and entertainment. Unrest is falling. Economists are horrified.",
+  policy_breadAndCircuses_off:
+    "The bread and circuses program has ended. Let's see how long the calm lasts.",
+  policy_mandatoryProfitShare_on:
+    "Mandatory profit sharing is now law. Businesses must distribute a cut of profits to every worker. Workers approve. Shareholders do not.",
+  policy_mandatoryProfitShare_off:
+    "Mandatory profit sharing repealed. The windfall stays with the owners again.",
+  policy_landValueTax_on:
+    "A land value tax has been enacted. Henry George would be proud. Landowners are furious. Economists say this is actually the most efficient tax possible.",
+  policy_banAdvertising_on:
+    "Advertising is banned. No more billboards, no more commercials, no more targeted manipulation. The luxury sector is experiencing an identity crisis.",
+  policy_banAdvertising_off:
+    "The advertising ban is lifted. The bombardment of commercial messages resumes immediately.",
+  policy_debtJubilee_on:
+    "DEBT JUBILEE! All debts are cancelled — right now, this instant. It is a Biblical reset. The slate is wiped clean. This happens only once.",
+  policy_lotteryRedistribution_on:
+    "The wealth lottery is running. Random rich citizens are paying a luck tax directly to random poor ones. It's chaotic. It's arbitrary. It's weirdly effective.",
+  policy_lotteryRedistribution_off:
+    "The wealth lottery has ended. The rich breathe a sigh of relief.",
+  policy_sumptuary_on:
+    "Sumptuary laws are in effect. The wealthy may no longer spend freely on luxury goods. Medieval rulers used this to maintain social order. It also destroyed the luxury economy.",
+  policy_sumptuary_off:
+    "Sumptuary laws repealed. The luxury market roars back to life.",
+  policy_degrowth_on:
+    "Degrowth policy enacted. The government has officially stopped chasing GDP growth. Economists are having a meltdown. Everyone else is working less and feeling healthier.",
+  policy_degrowth_off:
+    "Degrowth policy abandoned. Back to the infinite growth imperative.",
+  policy_algoCentralPlanning_on:
+    "Algorithmic central planning is online. An AI now sets all prices. The market volatility disappears. So does the spontaneous order. It is efficient. It is cold. It is watching.",
+  policy_algoCentralPlanning_off:
+    "The algorithm has been shut down. Prices will now rediscover chaos on their own.",
+  policy_universalBankAccount_on:
+    "Universal bank accounts issued to every citizen. No one is unbanked. The poorest residents finally have somewhere safe to store their savings.",
+  policy_universalBankAccount_off:
+    "Universal bank accounts discontinued. Financial exclusion returns for the poorest citizens.",
+
   // Events
   pandemic:
     "A pandemic has struck. Health is dropping, businesses are closing, and workers are staying home.",
@@ -136,6 +180,22 @@ export function narrateInsight(insightId) {
 export function narrateEvent(eventType) {
   const script = NARRATION_SCRIPTS[eventType]
   if (script) narrate(script)
+}
+
+// Called when a policy toggle changes — narrates the activation/deactivation
+export function narratePolicy(key, value) {
+  // For toggles: use _on / _off scripts
+  const onKey = `policy_${key}_on`
+  const offKey = `policy_${key}_off`
+  if (value === true || value === false) {
+    const script = value ? NARRATION_SCRIPTS[onKey] : NARRATION_SCRIPTS[offKey]
+    if (script) narrate(script)
+    return
+  }
+  // For sliders: narrate only on first non-zero activation
+  if (value > 0 && NARRATION_SCRIPTS[onKey]) {
+    narrate(NARRATION_SCRIPTS[onKey])
+  }
 }
 
 // Preload model in background (call after first user interaction)

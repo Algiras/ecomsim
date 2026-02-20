@@ -121,7 +121,20 @@ export const DEFAULT_POLICIES = {
   publicHealthcare: false,
   wealthTax: 0,             // 0–0.05
   openBorders: false,
-  subsidiesFarming: false
+  subsidiesFarming: false,
+  // ─── Weird Laws ───────────────────────────────────────────────────────────
+  fourDayWeek: false,
+  robotTax: 0,              // 0–0.5 (fraction of tech production taxed)
+  breadAndCircuses: false,
+  mandatoryProfitShare: 0,  // 0–0.3 (fraction of profit redistributed to employees)
+  landValueTax: 0,          // 0–0.05 annual LVT rate
+  banAdvertising: false,
+  debtJubilee: false,       // one-time trigger — engine resets it
+  lotteryRedistribution: false,
+  sumptuary: false,
+  degrowth: false,
+  algoCentralPlanning: false,
+  universalBankAccount: false
 }
 
 // ─── Economic shocks ─────────────────────────────────────────────────────────

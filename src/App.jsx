@@ -104,7 +104,9 @@ export default function App() {
       ...prev,
       policies: { ...prev.policies, [key]: validated }
     } : prev)
-  }, [sendToWorker])
+    // Narrate weird law toggling
+    narrator.onPolicy(key, validated)
+  }, [sendToWorker, narrator])
 
   const handleScenarioSelect = useCallback((id) => {
     setScenarioId(id)

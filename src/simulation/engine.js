@@ -128,6 +128,12 @@ export class SimEngine {
     // 5. Apply policy effects
     applyPolicyEffects(state, this.policies, this.market)
 
+    // 5b. Auto-reset one-shot weird laws
+    if (state._jubileeApplied) {
+      this.policies.debtJubilee = false
+      delete state._jubileeApplied
+    }
+
     // 6. Fire scheduled events at their designated tick
     for (const se of this.scheduledEvents) {
       if (this.tick === se.atTick) {

@@ -169,6 +169,128 @@ export const POLICY_DEFINITIONS = [
     icon: '🚜',
     description: 'Government support for food production. Lowers food prices but costs taxpayers.',
     tradeoff: '↑ Food supply + lower prices but ↑ Spending'
+  },
+
+  // ─── Weird Laws ──────────────────────────────────────────────────────────────
+  {
+    id: 'fourDayWeek',
+    name: '4-Day Work Week',
+    category: 'weird',
+    type: 'toggle',
+    icon: '🗓️',
+    description: 'Mandate a 4-day work week for all businesses. Workers are happier and healthier — but businesses get 20% less output per worker.',
+    tradeoff: '↑ Worker health & morale but ↓ Business productivity'
+  },
+  {
+    id: 'robotTax',
+    name: 'Robot Tax',
+    category: 'weird',
+    type: 'slider',
+    min: 0,
+    max: 0.5,
+    step: 0.05,
+    format: 'percent',
+    icon: '🤖',
+    description: 'Tax on automated production in the tech sector. Slows job displacement and funds redistribution.',
+    tradeoff: '↑ Employment but ↓ Tech sector growth'
+  },
+  {
+    id: 'breadAndCircuses',
+    name: 'Bread & Circuses',
+    category: 'weird',
+    type: 'toggle',
+    icon: '🎪',
+    description: 'Government-funded free food and entertainment for all. Romans used it to keep the masses pacified. Crushes unrest — briefly.',
+    tradeoff: '↓ Unrest now but ↑ Gov spending + dependency risk'
+  },
+  {
+    id: 'mandatoryProfitShare',
+    name: 'Mandatory Profit Sharing',
+    category: 'weird',
+    type: 'slider',
+    min: 0,
+    max: 0.3,
+    step: 0.05,
+    format: 'percent',
+    icon: '🤝',
+    description: 'Businesses must share a percentage of profits with all employees. Reduces inequality, may deter investment.',
+    tradeoff: '↑ Worker wealth + lower Gini but ↓ Business capital'
+  },
+  {
+    id: 'landValueTax',
+    name: 'Land Value Tax',
+    category: 'weird',
+    type: 'slider',
+    min: 0,
+    max: 0.05,
+    step: 0.005,
+    format: 'percent',
+    icon: '🌍',
+    description: 'Annual tax on land value only (not buildings). Georgist reform — discourages speculation, funds government efficiently.',
+    tradeoff: '↑ Gov revenue + lower housing prices but unpopular with landowners'
+  },
+  {
+    id: 'banAdvertising',
+    name: 'Ban Advertising',
+    category: 'weird',
+    type: 'toggle',
+    icon: '🚫',
+    description: 'Outlaws all commercial advertising. Luxury demand collapses. People only buy what they actually need. Businesses struggle to grow.',
+    tradeoff: '↓ Luxury consumption + lower Gini but ↓ Business growth'
+  },
+  {
+    id: 'debtJubilee',
+    name: 'Debt Jubilee',
+    category: 'weird',
+    type: 'toggle',
+    icon: '🎺',
+    description: 'One-time Biblical-style cancellation of all debts. Agents with negative wealth are reset to zero. Happens once then turns off.',
+    tradeoff: 'Massive one-time equality reset — may destabilize lenders'
+  },
+  {
+    id: 'lotteryRedistribution',
+    name: 'Wealth Lottery',
+    category: 'weird',
+    type: 'toggle',
+    icon: '🎰',
+    description: 'Each tick, a random wealthy citizen pays a "luck tax" directly to a random poor citizen. Chaotic but surprisingly equalizing.',
+    tradeoff: '↓ Extreme wealth concentration but unpredictable and arbitrary'
+  },
+  {
+    id: 'sumptuary',
+    name: 'Sumptuary Laws',
+    category: 'weird',
+    type: 'toggle',
+    icon: '👑',
+    description: 'Legal limits on luxury spending for the wealthy. Medieval kings used these. Luxury sector collapses but inequality drops.',
+    tradeoff: '↓ Inequality + ↓ Gini but luxury sector destruction'
+  },
+  {
+    id: 'degrowth',
+    name: 'Degrowth Policy',
+    category: 'weird',
+    type: 'toggle',
+    icon: '🌱',
+    description: 'Deliberately slow economic growth. Less GDP obsession means less stress, more stability, better health — but economists freak out.',
+    tradeoff: '↓ GDP growth + ↑ Health & stability but controversial'
+  },
+  {
+    id: 'algoCentralPlanning',
+    name: 'Algorithmic Planning',
+    category: 'weird',
+    type: 'toggle',
+    icon: '🧮',
+    description: 'An AI algorithm sets all prices and wages. Eliminates market volatility. Cold, efficient, and slightly dystopian.',
+    tradeoff: '↓ Price chaos but removes market discovery + creepy'
+  },
+  {
+    id: 'universalBankAccount',
+    name: 'Universal Bank Account',
+    category: 'weird',
+    type: 'toggle',
+    icon: '🏧',
+    description: 'Every citizen gets a free government bank account. Reduces financial exclusion, enables direct transfers, improves savings rates.',
+    tradeoff: '↑ Financial inclusion + savings but ↑ Gov infrastructure cost'
   }
 ]
 
@@ -178,5 +300,6 @@ export const POLICY_CATEGORIES = {
   labor: { label: 'Labor Market', color: '#22c55e' },
   welfare: { label: 'Welfare', color: '#ec4899' },
   regulation: { label: 'Regulation', color: '#8b5cf6' },
-  public: { label: 'Public Services', color: '#06b6d4' }
+  public: { label: 'Public Services', color: '#06b6d4' },
+  weird: { label: '⚗️ Weird Laws', color: '#f97316' }
 }

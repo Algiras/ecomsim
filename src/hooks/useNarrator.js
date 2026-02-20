@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import {
-  narrate, stop, narrateInsight, narrateEvent,
+  narrate, stop, narrateInsight, narrateEvent, narratePolicy,
   preloadNarrator, isLoaded
 } from '../services/narrator.js'
 
@@ -48,5 +48,9 @@ export function useNarrator() {
     if (enabledRef.current) narrate(text)
   }, [])
 
-  return { enabled, loading, ready, enable, disable, onInsight, onEvent, speak }
+  const onPolicy = useCallback((key, value) => {
+    if (enabledRef.current) narratePolicy(key, value)
+  }, [])
+
+  return { enabled, loading, ready, enable, disable, onInsight, onEvent, speak, onPolicy }
 }
