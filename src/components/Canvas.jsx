@@ -9,6 +9,27 @@ export default function Canvas({ simState, onAgentClick, selectedAgentId }) {
   const rafRef = useRef(null)
   const tickRef = useRef(0)
   const prevAgentIdsRef = useRef(new Set())
+  const dprRef = useRef(1)
+
+  // Resize canvas to fill its container at device pixel ratio — eliminates pixelation
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1
+      dprRef.current = dpr
+      const rect = canvas.getBoundingClientRect()
+      if (rect.width === 0 || rect.height === 0) return
+      canvas.width = Math.round(rect.width * dpr)
+      canvas.height = Math.round(rect.height * dpr)
+    }
+
+    resize()
+    const ro = new ResizeObserver(resize)
+    ro.observe(canvas)
+    return () => ro.disconnect()
+  }, [])
 
   const render = useCallback(() => {
     const canvas = canvasRef.current
@@ -18,9 +39,23 @@ export default function Canvas({ simState, onAgentClick, selectedAgentId }) {
     tickRef.current++
     const tick = tickRef.current
 
-    // Clear with dark background
+    const dpr = dprRef.current
+    const w = canvas.width
+    const h = canvas.height
+
+    // Scale context so simulation coordinates (0..CANVAS_WIDTH, 0..CANVAS_HEIGHT)
+    // map cleanly onto the physical pixel buffer at any DPR or window size
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    const scaleX = w / CANVAS_WIDTH
+    const scaleY = h / CANVAS_HEIGHT
+    const scale = Math.min(scaleX, scaleY)
+    const offsetX = (w - CANVAS_WIDTH * scale) / 2
+    const offsetY = (h - CANVAS_HEIGHT * scale) / 2
+    ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY)
+
+    // Clear with dark background (in logical coords)
     ctx.fillStyle = '#0a0a0f'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.fillRect(-offsetX / scale, -offsetY / scale, w / scale, h / scale)
 
     if (!simState) {
       // Loading state
@@ -83,10 +118,17 @@ export default function Canvas({ simState, onAgentClick, selectedAgentId }) {
     if (!simState?.agents || !onAgentClick) return
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
-    const scaleX = canvas.width / rect.width
-    const scaleY = canvas.height / rect.height
-    const mx = (e.clientX - rect.left) * scaleX
-    const my = (e.clientY - rect.top) * scaleY
+    // Map CSS pixels → simulation logical coordinates
+    const dpr = dprRef.current
+    const w = canvas.width
+    const h = canvas.height
+    const scale = Math.min(w / CANVAS_WIDTH, h / CANVAS_HEIGHT)
+    const offsetX = (w - CANVAS_WIDTH * scale) / 2
+    const offsetY = (h - CANVAS_HEIGHT * scale) / 2
+    const cssX = e.clientX - rect.left
+    const cssY = e.clientY - rect.top
+    const mx = (cssX * dpr - offsetX) / scale
+    const my = (cssY * dpr - offsetY) / scale
 
     // Find closest agent within 12px
     let closest = null
@@ -105,10 +147,8 @@ export default function Canvas({ simState, onAgentClick, selectedAgentId }) {
   return (
     <canvas
       ref={canvasRef}
-      width={CANVAS_WIDTH}
-      height={CANVAS_HEIGHT}
       className="w-full h-full cursor-crosshair"
-      style={{ imageRendering: 'pixelated', display: 'block' }}
+      style={{ display: 'block' }}
       onClick={handleClick}
     />
   )

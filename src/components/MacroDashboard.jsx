@@ -21,12 +21,13 @@ const AXIS_STYLE = {
 
 function ChartCard({ title, subtitle, color = '#6366f1', children, wide = false }) {
   return (
-    <div className={`bg-[#0d0d14] border border-[#1e1e2e] rounded-xl p-3 flex flex-col gap-2 ${wide ? 'col-span-2' : ''}`}>
-      <div>
-        <div className="text-xs font-mono font-bold text-[#e2e8f0]" style={{ color }}>{title}</div>
+    <div className={`bg-[#0d0d14] border border-[#1e1e2e] rounded-xl p-3 flex flex-col gap-1 ${wide ? 'col-span-2' : ''}`}>
+      <div className="flex-shrink-0">
+        <div className="text-xs font-mono font-bold" style={{ color }}>{title}</div>
         {subtitle && <div className="text-[10px] font-mono text-[#475569]">{subtitle}</div>}
       </div>
-      <div className="flex-1" style={{ minHeight: 150 }}>
+      {/* Fixed pixel height so ResponsiveContainer height="100%" resolves */}
+      <div style={{ height: 160, width: '100%' }}>
         {children}
       </div>
     </div>
