@@ -11,6 +11,7 @@ import ObjectivesPanel from './components/ObjectivesPanel.jsx'
 import EventChoiceModal from './components/EventChoiceModal.jsx'
 import ReportCard from './components/ReportCard.jsx'
 import MacroDashboard from './components/MacroDashboard.jsx'
+import CanvasLegend from './components/CanvasLegend.jsx'
 import StoryIntro from './components/StoryIntro.jsx'
 import StoryOutro from './components/StoryOutro.jsx'
 import { validatePolicy } from './simulation/policy.js'
@@ -28,7 +29,7 @@ export default function App() {
   const [paused, setPaused] = useState(false)
   const [speed, setSpeed] = useState(5)
   const [scenarioId, setScenarioId] = useState(loadScenario())
-  const [showModeSelect, setShowModeSelect] = useState(false)
+  const [showModeSelect, setShowModeSelect] = useState(true)
   const [currentInsight, setCurrentInsight] = useState(null)
   const [selectedAgent, setSelectedAgent] = useState(null)
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -273,6 +274,8 @@ export default function App() {
             <AgentTooltip agent={selectedAgent} onClose={() => setSelectedAgent(null)} />
           )}
 
+          <CanvasLegend />
+
           {/* Story chapter banner */}
           {isStoryMode && currentChapter && !storyIntro && !storyOutro && (
             <div
@@ -285,7 +288,7 @@ export default function App() {
         </div>
 
         {/* Right panel */}
-        <div className="w-72 flex flex-col border-l border-[#1e1e2e] bg-[#0a0a0f]">
+        <div className="w-80 shrink-0 flex flex-col border-l border-[#1e1e2e] bg-[#0a0a0f]">
           <div className="flex border-b border-[#1e1e2e]">
             {tabsToShow.map(tab => (
               <button

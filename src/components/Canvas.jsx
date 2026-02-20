@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react'
 import { renderAgents, renderEmploymentLines } from '../rendering/agentRenderer.js'
 import { renderBusinesses, renderBusinessZones } from '../rendering/businessRenderer.js'
-import { renderEffects, addBirthEffect, addDeathEffect } from '../rendering/effectRenderer.js'
+import { renderEffects, renderRevolutionOverlay, setRevolutionActive, addBirthEffect, addDeathEffect, addRevolutionEffect } from '../rendering/effectRenderer.js'
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../utils/constants.js'
 
 export default function Canvas({ simState, onAgentClick, selectedAgentId }) {
@@ -72,11 +72,21 @@ export default function Canvas({ simState, onAgentClick, selectedAgentId }) {
     const currentIds = new Set(agents.filter(a => a.alive).map(a => a.id))
     const prevIds = prevAgentIdsRef.current
 
+    // Revolution overlay
+    const isRevolution = simState?.activeEvents?.some(e => e.type === 'revolution')
+    setRevolutionActive(!!isRevolution)
+
     // Deaths
     for (const id of prevIds) {
       if (!currentIds.has(id)) {
         const dead = agents.find(a => a.id === id)
-        if (dead) addDeathEffect(dead.x, dead.y)
+        if (dead) {
+          if (isRevolution) {
+            addRevolutionEffect(dead.x, dead.y)
+          } else {
+            addDeathEffect(dead.x, dead.y)
+          }
+        }
       }
     }
 
@@ -103,6 +113,9 @@ export default function Canvas({ simState, onAgentClick, selectedAgentId }) {
 
     // Layer 5: Particle effects
     renderEffects(ctx)
+
+    // Layer 6: Revolution red overlay (drawn in screen space, bypasses transform)
+    renderRevolutionOverlay(ctx, w, h)
 
     rafRef.current = requestAnimationFrame(render)
   }, [simState, selectedAgentId])
@@ -147,7 +160,7 @@ export default function Canvas({ simState, onAgentClick, selectedAgentId }) {
   return (
     <canvas
       ref={canvasRef}
-      className="w-full h-full cursor-crosshair"
+      className="absolute inset-0 w-full h-full cursor-crosshair"
       style={{ display: 'block' }}
       onClick={handleClick}
     />

@@ -29,13 +29,13 @@ export function renderAgent(ctx, agent, selected, tick) {
   // Shape based on life stage/role
   ctx.beginPath()
 
-  if (isOwner || state === 'owner') {
-    // Diamond for business owners
-    ctx.moveTo(x, y - r * 1.4)
-    ctx.lineTo(x + r * 1.0, y)
-    ctx.lineTo(x, y + r * 1.4)
-    ctx.lineTo(x - r * 1.0, y)
-    ctx.closePath()
+    if (isOwner || state === 'owner') {
+      // Diamond for business owners
+      ctx.moveTo(x, y - r * 1.4)
+      ctx.lineTo(x + r * 1.4, y)
+      ctx.lineTo(x, y + r * 1.4)
+      ctx.lineTo(x - r * 1.4, y)
+      ctx.closePath()
   } else if (state === 'child' || age < 18 * 52) {
     // Small circle for children
     ctx.arc(x, y, r * 0.65, 0, Math.PI * 2)
