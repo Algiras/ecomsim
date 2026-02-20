@@ -1,4 +1,4 @@
-import { Agent, createInitialAgents, AgentState } from './agent.js'
+import { Agent, createInitialAgents } from './agent.js'
 import { getScenario as _getScenario } from '../data/scenarios.js'
 import { Business, createInitialBusinesses } from './business.js'
 import { createMarketState, updatePrices } from './market.js'

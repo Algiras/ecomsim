@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, ReferenceLine
+  BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  LineChart, Line
 } from 'recharts'
 import { lorenzCurve } from '../utils/math.js'
 
@@ -68,7 +68,7 @@ export default function WealthHistogram({ agents }) {
               />
               <Bar dataKey="count" radius={[2, 2, 0, 0]}>
                 {histData.map((entry, index) => (
-                  <rect key={index} fill={entry.fill} />
+                  <Cell key={index} fill={entry.fill} />
                 ))}
               </Bar>
             </BarChart>
