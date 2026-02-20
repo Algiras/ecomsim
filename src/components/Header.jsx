@@ -17,7 +17,10 @@ export default function Header({
   onScenarioOpen,
   onShockMe,
   scenarioName,
-  year
+  year,
+  narratorEnabled,
+  narratorLoading,
+  onNarratorToggle
 }) {
   const [copied, setCopied] = useState(false)
 
@@ -107,6 +110,20 @@ export default function Header({
           title="Copy shareable link"
         >
           {copied ? '✓ Copied!' : '🔗 Share'}
+        </button>
+
+        {/* Narrator toggle */}
+        <button
+          onClick={onNarratorToggle}
+          disabled={narratorLoading}
+          className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${
+            narratorEnabled
+              ? 'border-[#06b6d4] text-[#06b6d4] bg-[#06b6d411]'
+              : 'border-[#1e1e2e] text-[#475569] hover:border-[#06b6d4] hover:text-[#06b6d4]'
+          } ${narratorLoading ? 'opacity-50 cursor-wait' : ''}`}
+          title={narratorEnabled ? 'Disable narration' : 'Enable AI narration (loads ~40MB model)'}
+        >
+          {narratorLoading ? '⏳ Loading…' : narratorEnabled ? '🔊 Voice On' : '🔇 Voice'}
         </button>
       </div>
     </header>

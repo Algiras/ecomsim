@@ -9,8 +9,10 @@ import AgentTooltip from './components/AgentTooltip.jsx'
 import WealthHistogram from './components/WealthHistogram.jsx'
 import { validatePolicy } from './simulation/policy.js'
 import { loadScenario, saveScenario } from './utils/storage.js'
+import { useNarrator } from './hooks/useNarrator.js'
 
 export default function App() {
+  const narrator = useNarrator()
   const workerRef = useRef(null)
   const [simState, setSimState] = useState(null)
   const [paused, setPaused] = useState(false)
@@ -36,12 +38,13 @@ export default function App() {
           setSimState(state)
           break
         case 'EVENT':
-          // Could show event notification here
           console.log('[Event]', event.name)
+          narrator.onEvent(event.type)
           break
         case 'INSIGHT':
           setCurrentInsight(insight)
           setInsightLog(prev => [insight, ...prev].slice(0, 20))
+          narrator.onInsight(insight.id)
           break
       }
     })
@@ -129,6 +132,9 @@ export default function App() {
         onShockMe={handleShockMe}
         scenarioName={scenarioName}
         year={simState?.year}
+        narratorEnabled={narrator.enabled}
+        narratorLoading={narrator.loading}
+        onNarratorToggle={narrator.enabled ? narrator.disable : narrator.enable}
       />
 
       {/* Main layout */}
