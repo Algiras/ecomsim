@@ -5,7 +5,8 @@ import { createMarketState, updatePrices } from './market.js'
 import { runLaborMarket } from './labor.js'
 import { createPolicyState, applyPolicyEffects } from './policy.js'
 import { createMetricsState, updateMetrics, toMetricsSnapshot } from './metrics.js'
-import { createEventsState, tickEvents } from './events.js'
+import { createEventsState, tickEvents, resolveEventChoice } from './events.js'
+import { SCENARIO_OBJECTIVES, evaluateObjective, objectiveProgress } from '../data/objectives.js'
 import {
   INITIAL_AGENTS, INITIAL_BUSINESSES, METRICS_UPDATE_EVERY,
   WORKER_UPDATE_EVERY, STARTUP_PROBABILITY
@@ -35,6 +36,20 @@ export class SimEngine {
       scenario
     )
 
+    // Objectives
+    this.objectives = SCENARIO_OBJECTIVES[scenario.id] || []
+    this.objectiveProgress = this.objectives.map(o => ({
+      ...o, met: false, completed: false, sustainCount: 0, progress: 0, sustainProgress: 0
+    }))
+    this.initialMetrics = null  // captured after first metrics update
+    this.scenarioComplete = false
+
+    // Scheduled events (array)
+    this.scheduledEvents = scenario.scheduledEvents || []
+    if (scenario.scheduledEvent) {
+      this.scheduledEvents = [...this.scheduledEvents, scenario.scheduledEvent]
+    }
+
     this._pendingMessages = []
   }
 
@@ -56,11 +71,15 @@ export class SimEngine {
       case 'RESUME':
         this.running = true
         break
+      case 'RESOLVE_CHOICE':
+        resolveEventChoice(this.eventsState, msg.eventId, msg.choiceId, this._buildState())
+        break
     }
   }
 
   _reset(scenarioId) {
     const scenario = _getScenario(scenarioId) || {}
+    this.scenario = scenario
     this.tick = 0
     this.policies = createPolicyState(scenario.policies || {})
     this.market = createMarketState()
@@ -68,6 +87,18 @@ export class SimEngine {
     this.eventsState = createEventsState()
     this.agents = createInitialAgents(scenario.agentCount || INITIAL_AGENTS, scenario)
     this.businesses = createInitialBusinesses(scenario.businessCount || INITIAL_BUSINESSES, this.agents, scenario)
+    this.objectives = SCENARIO_OBJECTIVES[scenario.id] || []
+    this.objectiveProgress = this.objectives.map(o => ({
+      ...o, met: false, completed: false, sustainCount: 0, progress: 0, sustainProgress: 0
+    }))
+    this.initialMetrics = null
+    this.scenarioComplete = false
+    this.scheduledEvents = scenario.scheduledEvents || []
+    if (scenario.scheduledEvent) {
+      this.scheduledEvents = [...this.scheduledEvents, scenario.scheduledEvent]
+    }
+    this._firedInsights = null
+    this._lastInsightTick = null
   }
 
   // Main tick function — run once per simulation step
@@ -97,7 +128,14 @@ export class SimEngine {
     // 5. Apply policy effects
     applyPolicyEffects(state, this.policies, this.market)
 
-    // 6. Handle events
+    // 6. Fire scheduled events at their designated tick
+    for (const se of this.scheduledEvents) {
+      if (this.tick === se.atTick) {
+        tickEvents(this.eventsState, state, this.policies, this.tick, se.type)
+      }
+    }
+
+    // 6b. Handle random events
     const newEvent = tickEvents(this.eventsState, state, this.policies, this.tick)
     if (newEvent) {
       // Handle immigration wave spawning
@@ -120,15 +158,31 @@ export class SimEngine {
     // 10. Update metrics every N ticks
     if (this.tick % METRICS_UPDATE_EVERY === 0) {
       updateMetrics(this.metrics, state, this.market, this.policies)
+      // Capture initial metrics snapshot (first time only)
+      if (!this.initialMetrics) {
+        this.initialMetrics = { ...toMetricsSnapshot(this.metrics) }
+      }
+      this._updateObjectives()
     }
 
     // 11. Check insight triggers
     const insight = this._checkInsights()
 
+    // 12. Check scenario completion
+    let scenarioComplete = null
+    if (!this.scenarioComplete && this.scenario.durationYears) {
+      const year = Math.floor(this.tick / 52)
+      if (year >= this.scenario.durationYears) {
+        this.scenarioComplete = true
+        scenarioComplete = this._buildReport()
+      }
+    }
+
     return {
       shouldUpdate: this.tick % WORKER_UPDATE_EVERY === 0,
       event: newEvent,
-      insight
+      insight,
+      scenarioComplete
     }
   }
 
@@ -139,6 +193,85 @@ export class SimEngine {
       policies: this.policies,
       market: this.market,
       metrics: this.metrics
+    }
+  }
+
+  _updateObjectives() {
+    const metrics = toMetricsSnapshot(this.metrics)
+    for (const obj of this.objectiveProgress) {
+      const met = evaluateObjective(obj, metrics, this.initialMetrics)
+      obj.met = met
+      obj.progress = objectiveProgress(obj, metrics, this.initialMetrics)
+
+      if (met) {
+        obj.sustainCount = (obj.sustainCount || 0) + METRICS_UPDATE_EVERY
+        const required = obj.sustainTicks || 0
+        obj.sustainProgress = required > 0 ? Math.min(1, obj.sustainCount / required) : 1
+        if (obj.sustainCount >= required && !obj.completed) {
+          obj.completed = true
+        }
+      } else {
+        obj.sustainCount = 0
+        obj.sustainProgress = 0
+      }
+    }
+  }
+
+  _buildObjectivesSnapshot() {
+    return this.objectiveProgress.map(o => ({
+      id: o.id,
+      label: o.label,
+      description: o.description,
+      icon: o.icon,
+      tip: o.tip,
+      met: o.met,
+      completed: o.completed,
+      progress: o.progress,
+      sustainProgress: o.sustainProgress,
+      weight: o.weight
+    }))
+  }
+
+  _buildReport() {
+    const metrics = toMetricsSnapshot(this.metrics)
+    const objectives = this._buildObjectivesSnapshot()
+
+    const totalWeight = objectives.reduce((s, o) => s + (o.weight || 0), 0) || 1
+    const weightedScore = objectives.reduce((s, o) => {
+      const score = o.completed ? 100 : o.met ? 50 : Math.round(o.progress * 40)
+      return s + score * (o.weight || 0)
+    }, 0) / totalWeight
+
+    const finalScore = Math.round(weightedScore)
+    const grade = finalScore >= 90 ? 'A+' : finalScore >= 80 ? 'A' : finalScore >= 70 ? 'B'
+      : finalScore >= 60 ? 'C' : finalScore >= 45 ? 'D' : 'F'
+
+    const giniScore = Math.round(Math.max(0, (1 - this.metrics.gini / 0.7) * 100))
+    const growthScore = Math.round(Math.min(100, Math.max(0, (metrics.gdpGrowth + 0.02) * 2000)))
+    const stabilityScore = Math.round(Math.max(0, 100 - Math.abs(metrics.inflation) * 5 - metrics.socialUnrest * 100))
+
+    return {
+      scenarioId: this.scenario.id,
+      scenarioName: this.scenario.name,
+      finalScore,
+      grade,
+      domains: {
+        equality: { score: giniScore, label: 'Equality' },
+        growth: { score: growthScore, label: 'Growth' },
+        stability: { score: stabilityScore, label: 'Stability' }
+      },
+      objectives,
+      playerOutcome: {
+        gdpChangePercent: this.initialMetrics
+          ? Math.round(((metrics.gdp - this.initialMetrics.gdp) / (this.initialMetrics.gdp || 1)) * 100)
+          : 0,
+        peakUnemployment: Math.round(metrics.unemployment * 100),
+        inflationAvg: Math.round(metrics.inflation * 10) / 10,
+        gini: Math.round(metrics.gini * 100) / 100,
+        povertyRate: Math.round(metrics.povertyRate * 100)
+      },
+      finalPolicies: { ...this.policies },
+      year: Math.floor(this.tick / 52)
     }
   }
 
@@ -314,7 +447,18 @@ export class SimEngine {
         icon: e.icon,
         description: e.description,
         startTick: e.startTick
-      }))
+      })),
+      pendingChoice: this.eventsState.pendingChoiceEvent ? {
+        id: this.eventsState.pendingChoiceEvent.id,
+        type: this.eventsState.pendingChoiceEvent.type,
+        name: this.eventsState.pendingChoiceEvent.name,
+        description: this.eventsState.pendingChoiceEvent.description,
+        icon: this.eventsState.pendingChoiceEvent.icon,
+        choices: this.eventsState.pendingChoiceEvent.definition.choices
+      } : null,
+      objectives: this._buildObjectivesSnapshot(),
+      scenarioDurationYears: this.scenario.durationYears || null,
+      isHistorical: this.scenario.isHistorical || false
     }
   }
 }

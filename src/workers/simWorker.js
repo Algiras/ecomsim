@@ -20,11 +20,15 @@ function loop(timestamp) {
   const ticksPerFrame = speed
   let event = null
   let insight = null
+  let scenarioComplete = null
 
   for (let i = 0; i < ticksPerFrame; i++) {
     const result = engine.step()
     if (result.event) event = result.event
     if (result.insight) insight = result.insight
+    if (result.scenarioComplete) scenarioComplete = result.scenarioComplete
+    // Stop processing ticks if a choice is pending
+    if (event?.requiresChoice) break
   }
 
   // Send state snapshot
@@ -33,9 +37,18 @@ function loop(timestamp) {
 
   if (event) {
     self.postMessage({ type: 'EVENT', event })
+    // If event requires player choice, pause automatically
+    if (event.requiresChoice) {
+      running = false
+      self.postMessage({ type: 'CHOICE_REQUIRED', event: snapshot.pendingChoice })
+    }
   }
   if (insight) {
     self.postMessage({ type: 'INSIGHT', insight })
+  }
+  if (scenarioComplete) {
+    running = false
+    self.postMessage({ type: 'SCENARIO_COMPLETE', report: scenarioComplete })
   }
 
   animFrameId = setTimeout(loop, 1000 / 60) // ~60fps
@@ -76,6 +89,15 @@ self.addEventListener('message', (e) => {
       if (animFrameId) { clearTimeout(animFrameId); animFrameId = null }
       init(msg.scenarioId || 'freeMarket')
       loop()
+      break
+
+    case 'RESOLVE_CHOICE':
+      if (engine) {
+        engine.applyMessage(msg)
+        // Resume simulation after choice
+        running = true
+        loop()
+      }
       break
 
     case 'GET_SNAPSHOT':

@@ -7,9 +7,15 @@ import ScenarioSelect from './components/ScenarioSelect.jsx'
 import InsightPopup from './components/InsightPopup.jsx'
 import AgentTooltip from './components/AgentTooltip.jsx'
 import WealthHistogram from './components/WealthHistogram.jsx'
+import ObjectivesPanel from './components/ObjectivesPanel.jsx'
+import EventChoiceModal from './components/EventChoiceModal.jsx'
+import ReportCard from './components/ReportCard.jsx'
 import { validatePolicy } from './simulation/policy.js'
 import { loadScenario, saveScenario } from './utils/storage.js'
 import { useNarrator } from './hooks/useNarrator.js'
+import { SCENARIOS } from './data/scenarios.js'
+
+const TABS = ['dashboard', 'objectives', 'policies', 'histogram']
 
 export default function App() {
   const narrator = useNarrator()
@@ -20,9 +26,10 @@ export default function App() {
   const [scenarioId, setScenarioId] = useState(loadScenario())
   const [showScenario, setShowScenario] = useState(false)
   const [currentInsight, setCurrentInsight] = useState(null)
-  const [insightLog, setInsightLog] = useState([])
   const [selectedAgent, setSelectedAgent] = useState(null)
-  const [activeTab, setActiveTab] = useState('dashboard') // dashboard | policies | histogram
+  const [activeTab, setActiveTab] = useState('dashboard')
+  const [pendingChoice, setPendingChoice] = useState(null)   // event awaiting player choice
+  const [reportCard, setReportCard] = useState(null)         // end-of-scenario report
 
   // Initialize worker
   useEffect(() => {
@@ -32,19 +39,25 @@ export default function App() {
     )
 
     worker.addEventListener('message', (e) => {
-      const { type, state, event, insight } = e.data
+      const { type, state, event, insight, report } = e.data
       switch (type) {
         case 'STATE_UPDATE':
           setSimState(state)
           break
         case 'EVENT':
-          console.log('[Event]', event.name)
-          narrator.onEvent(event.type)
+          narrator.onEvent(event?.type)
+          break
+        case 'CHOICE_REQUIRED':
+          setPendingChoice(event)
+          setPaused(true)
           break
         case 'INSIGHT':
           setCurrentInsight(insight)
-          setInsightLog(prev => [insight, ...prev].slice(0, 20))
           narrator.onInsight(insight.id)
+          break
+        case 'SCENARIO_COMPLETE':
+          setReportCard(report)
+          setPaused(true)
           break
       }
     })
@@ -73,12 +86,11 @@ export default function App() {
     setSimState(null)
     setCurrentInsight(null)
     setSelectedAgent(null)
+    setPendingChoice(null)
+    setReportCard(null)
     sendToWorker({ type: 'RESET', scenarioId })
-    if (paused) {
-      setPaused(false)
-      sendToWorker({ type: 'RESUME' })
-    }
-  }, [sendToWorker, scenarioId, paused])
+    setPaused(false)
+  }, [sendToWorker, scenarioId])
 
   const handleSpeedChange = useCallback((s) => {
     setSpeed(s)
@@ -88,7 +100,6 @@ export default function App() {
   const handlePolicyChange = useCallback((key, value) => {
     const validated = validatePolicy(key, value)
     sendToWorker({ type: 'SET_POLICY', policy: key, value: validated })
-    // Optimistically update local state for responsive UI
     setSimState(prev => prev ? {
       ...prev,
       policies: { ...prev.policies, [key]: validated }
@@ -101,26 +112,41 @@ export default function App() {
     setSimState(null)
     setCurrentInsight(null)
     setSelectedAgent(null)
+    setPendingChoice(null)
+    setReportCard(null)
     sendToWorker({ type: 'RESET', scenarioId: id })
     setPaused(false)
+    // Switch to objectives tab for historical scenarios
+    if (SCENARIOS[id]?.isHistorical) setActiveTab('objectives')
   }, [sendToWorker])
 
   const handleShockMe = useCallback(() => {
-    // Trigger a random event by temporarily boosting shock probability
     sendToWorker({ type: 'SET_POLICY', policy: '_forceShock', value: true })
   }, [sendToWorker])
 
-  const handleAgentClick = useCallback((agent) => {
-    setSelectedAgent(agent)
+  const handleChoiceResolved = useCallback((eventId, choiceId) => {
+    setPendingChoice(null)
+    sendToWorker({ type: 'RESOLVE_CHOICE', eventId, choiceId })
+    setPaused(false)
+  }, [sendToWorker])
+
+  const handleRetry = useCallback(() => {
+    setReportCard(null)
+    handleReset()
+  }, [handleReset])
+
+  const handleNextScenario = useCallback(() => {
+    setReportCard(null)
+    setShowScenario(true)
   }, [])
 
-  const scenarioName = simState
-    ? (scenarioId === 'freeMarket' ? 'Free Market' : scenarioId === 'debtSpiral' ? 'Debt Spiral' : 'Tech Disruption')
-    : 'Loading...'
+  const scenarioName = SCENARIOS[scenarioId]?.name || 'Free Market'
+
+  const hasObjectives = simState?.objectives?.length > 0
+  const tabsToShow = hasObjectives ? TABS : TABS.filter(t => t !== 'objectives')
 
   return (
     <div className="h-screen flex flex-col bg-[#0a0a0f] text-[#e2e8f0] overflow-hidden font-mono">
-      {/* Header */}
       <Header
         paused={paused}
         speed={speed}
@@ -137,30 +163,23 @@ export default function App() {
         onNarratorToggle={narrator.enabled ? narrator.disable : narrator.enable}
       />
 
-      {/* Main layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Canvas — center */}
+        {/* Canvas */}
         <div className="flex-1 relative bg-[#0a0a0f]">
           <Canvas
             simState={simState}
-            onAgentClick={handleAgentClick}
+            onAgentClick={setSelectedAgent}
             selectedAgentId={selectedAgent?.id}
           />
-
-          {/* Agent tooltip overlay */}
           {selectedAgent && (
-            <AgentTooltip
-              agent={selectedAgent}
-              onClose={() => setSelectedAgent(null)}
-            />
+            <AgentTooltip agent={selectedAgent} onClose={() => setSelectedAgent(null)} />
           )}
         </div>
 
         {/* Right panel */}
         <div className="w-72 flex flex-col border-l border-[#1e1e2e] bg-[#0a0a0f]">
-          {/* Tabs */}
           <div className="flex border-b border-[#1e1e2e]">
-            {['dashboard', 'policies', 'histogram'].map(tab => (
+            {tabsToShow.map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -170,18 +189,27 @@ export default function App() {
                     : 'text-[#475569] hover:text-[#94a3b8]'
                 }`}
               >
-                {tab}
+                {tab === 'objectives' && hasObjectives
+                  ? `🎯 ${simState.objectives.filter(o => o.completed).length}/${simState.objectives.length}`
+                  : tab}
               </button>
             ))}
           </div>
 
-          {/* Tab content */}
           <div className="flex-1 overflow-y-auto p-3">
             {activeTab === 'dashboard' && (
               <Dashboard
                 metrics={simState?.metrics}
                 market={simState?.market}
                 activeEvents={simState?.activeEvents}
+              />
+            )}
+            {activeTab === 'objectives' && (
+              <ObjectivesPanel
+                objectives={simState?.objectives}
+                scenarioDurationYears={simState?.scenarioDurationYears}
+                year={simState?.year}
+                scenarioName={scenarioName}
               />
             )}
             {activeTab === 'policies' && (
@@ -199,13 +227,20 @@ export default function App() {
 
       {/* Insight popup */}
       {currentInsight && (
-        <InsightPopup
-          insight={currentInsight}
-          onDismiss={() => setCurrentInsight(null)}
-        />
+        <InsightPopup insight={currentInsight} onDismiss={() => setCurrentInsight(null)} />
       )}
 
-      {/* Scenario modal */}
+      {/* Event choice modal */}
+      {pendingChoice && (
+        <EventChoiceModal event={pendingChoice} onChoose={handleChoiceResolved} />
+      )}
+
+      {/* Scenario complete report card */}
+      {reportCard && (
+        <ReportCard report={reportCard} onRetry={handleRetry} onNextScenario={handleNextScenario} />
+      )}
+
+      {/* Scenario picker */}
       {showScenario && (
         <ScenarioSelect
           current={scenarioId}
