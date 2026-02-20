@@ -10,6 +10,7 @@ import WealthHistogram from './components/WealthHistogram.jsx'
 import ObjectivesPanel from './components/ObjectivesPanel.jsx'
 import EventChoiceModal from './components/EventChoiceModal.jsx'
 import ReportCard from './components/ReportCard.jsx'
+import MacroDashboard from './components/MacroDashboard.jsx'
 import { validatePolicy } from './simulation/policy.js'
 import { loadScenario, saveScenario } from './utils/storage.js'
 import { useNarrator } from './hooks/useNarrator.js'
@@ -30,6 +31,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [pendingChoice, setPendingChoice] = useState(null)   // event awaiting player choice
   const [reportCard, setReportCard] = useState(null)         // end-of-scenario report
+  const [showStats, setShowStats] = useState(false)
 
   // Initialize worker
   useEffect(() => {
@@ -158,6 +160,7 @@ export default function App() {
         onSpeedChange={handleSpeedChange}
         onScenarioOpen={() => setShowScenario(true)}
         onShockMe={handleShockMe}
+        onStatsOpen={() => setShowStats(true)}
         scenarioName={scenarioName}
         year={simState?.year}
         narratorEnabled={narrator.enabled}
@@ -240,6 +243,15 @@ export default function App() {
       {/* Scenario complete report card */}
       {reportCard && (
         <ReportCard report={reportCard} onRetry={handleRetry} onNextScenario={handleNextScenario} />
+      )}
+
+      {/* Macro stats overlay */}
+      {showStats && (
+        <MacroDashboard
+          metrics={simState?.metrics}
+          market={simState?.market}
+          onClose={() => setShowStats(false)}
+        />
       )}
 
       {/* Scenario picker */}

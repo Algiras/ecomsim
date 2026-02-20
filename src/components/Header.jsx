@@ -16,6 +16,7 @@ export default function Header({
   onSpeedChange,
   onScenarioOpen,
   onShockMe,
+  onStatsOpen,
   scenarioName,
   year,
   narratorEnabled,
@@ -110,6 +111,16 @@ export default function Header({
           title="Copy shareable link"
         >
           {copied ? '✓ Copied!' : '🔗 Share'}
+        </button>
+
+        {/* Stats dashboard */}
+        <button
+          onClick={onStatsOpen}
+          className="text-xs font-mono px-3 py-1.5 rounded border border-[#1e1e2e] text-[#64748b]
+            hover:border-[#6366f1] hover:text-[#6366f1] transition-colors"
+          title="Open macroeconomic statistics"
+        >
+          📊 Stats
         </button>
 
         {/* Narrator toggle */}

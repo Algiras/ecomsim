@@ -28,8 +28,15 @@ export function createMetricsState() {
       gini: [],
       unemployment: [],
       cpi: [],
+      inflation: [],
       population: [],
-      unrest: []
+      unrest: [],
+      wages: [],
+      poverty: [],
+      govBudget: [],
+      businessCount: [],
+      medianWealth: [],
+      sectorPrices: { food: [], housing: [], tech: [], luxury: [] }
     }
   }
 }
@@ -87,8 +94,19 @@ export function updateMetrics(metrics, state, market, policies) {
   _pushHistory(hist.gini, metrics.gini)
   _pushHistory(hist.unemployment, metrics.unemployment * 100)
   _pushHistory(hist.cpi, metrics.cpi)
+  _pushHistory(hist.inflation, metrics.inflation)
   _pushHistory(hist.population, metrics.population)
   _pushHistory(hist.unrest, metrics.socialUnrest * 100)
+  _pushHistory(hist.wages, metrics.avgWage)
+  _pushHistory(hist.poverty, metrics.povertyRate * 100)
+  _pushHistory(hist.govBudget, metrics.govBudget)
+  _pushHistory(hist.businessCount, metrics.businessCount)
+  _pushHistory(hist.medianWealth, metrics.medianWealth)
+
+  if (!hist.sectorPrices) hist.sectorPrices = { food: [], housing: [], tech: [], luxury: [] }
+  for (const sector of ['food', 'housing', 'tech', 'luxury']) {
+    _pushHistory(hist.sectorPrices[sector], market.prices?.[sector] || 0)
+  }
 
   return metrics
 }
