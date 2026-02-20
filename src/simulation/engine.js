@@ -198,7 +198,8 @@ export class SimEngine {
       businesses: this.businesses,
       policies: this.policies,
       market: this.market,
-      metrics: this.metrics
+      metrics: this.metrics,
+      prices: this.market.prices  // agents read prices via state.prices
     }
   }
 

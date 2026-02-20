@@ -1,4 +1,5 @@
 // Win conditions for each scenario — evaluated against live metrics
+import { STORY_CHAPTERS } from './storyMode.js'
 
 export const SCENARIO_OBJECTIVES = {
   greatDepression: [
@@ -196,6 +197,8 @@ export const SCENARIO_OBJECTIVES = {
     }
   ],
 
+  // ─── Story Mode chapter objectives ────────────────────────────────────────
+  // Injected dynamically below from storyMode.js
   nordicMiracle: [
     {
       id: 'equality_nordic',
@@ -234,6 +237,11 @@ export const SCENARIO_OBJECTIVES = {
       tip: 'Universal basic services (healthcare, education, housing support) matter more than cash transfers alone.'
     }
   ]
+}
+
+// Inject story chapter objectives
+for (const ch of STORY_CHAPTERS) {
+  SCENARIO_OBJECTIVES[ch.id] = ch.objectives
 }
 
 export function evaluateObjective(obj, metrics, initialMetrics) {

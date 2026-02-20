@@ -3,7 +3,7 @@ import Canvas from './components/Canvas.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import PolicyPanel from './components/PolicyPanel.jsx'
 import Header from './components/Header.jsx'
-import ScenarioSelect from './components/ScenarioSelect.jsx'
+import ModeSelect from './components/ModeSelect.jsx'
 import InsightPopup from './components/InsightPopup.jsx'
 import AgentTooltip from './components/AgentTooltip.jsx'
 import WealthHistogram from './components/WealthHistogram.jsx'
@@ -11,10 +11,13 @@ import ObjectivesPanel from './components/ObjectivesPanel.jsx'
 import EventChoiceModal from './components/EventChoiceModal.jsx'
 import ReportCard from './components/ReportCard.jsx'
 import MacroDashboard from './components/MacroDashboard.jsx'
+import StoryIntro from './components/StoryIntro.jsx'
+import StoryOutro from './components/StoryOutro.jsx'
 import { validatePolicy } from './simulation/policy.js'
-import { loadScenario, saveScenario } from './utils/storage.js'
+import { loadScenario, saveScenario, loadStoryProgress, saveStoryProgress, resetStoryProgress } from './utils/storage.js'
 import { useNarrator } from './hooks/useNarrator.js'
 import { SCENARIOS } from './data/scenarios.js'
+import { STORY_CHAPTERS, scoreChapter } from './data/storyMode.js'
 
 const TABS = ['dashboard', 'objectives', 'policies', 'histogram']
 
@@ -25,15 +28,20 @@ export default function App() {
   const [paused, setPaused] = useState(false)
   const [speed, setSpeed] = useState(5)
   const [scenarioId, setScenarioId] = useState(loadScenario())
-  const [showScenario, setShowScenario] = useState(false)
+  const [showModeSelect, setShowModeSelect] = useState(false)
   const [currentInsight, setCurrentInsight] = useState(null)
   const [selectedAgent, setSelectedAgent] = useState(null)
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [pendingChoice, setPendingChoice] = useState(null)   // event awaiting player choice
-  const [reportCard, setReportCard] = useState(null)         // end-of-scenario report
+  const [pendingChoice, setPendingChoice] = useState(null)
+  const [reportCard, setReportCard] = useState(null)
   const [showStats, setShowStats] = useState(false)
 
-  // Initialize worker
+  // Story mode state
+  const [storyProgress, setStoryProgress] = useState(loadStoryProgress)
+  const [storyIntro, setStoryIntro] = useState(null)    // chapter to show intro for
+  const [storyOutro, setStoryOutro] = useState(null)    // { chapter, objectives, score }
+
+  // ─── Worker init ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const worker = new Worker(
       new URL('./workers/simWorker.js', import.meta.url),
@@ -58,8 +66,7 @@ export default function App() {
           narrator.onInsight(insight.id)
           break
         case 'SCENARIO_COMPLETE':
-          setReportCard(report)
-          setPaused(true)
+          _handleScenarioComplete(report)
           break
       }
     })
@@ -70,10 +77,53 @@ export default function App() {
     return () => worker.terminate()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ─── Story scenario completion ─────────────────────────────────────────────
+  const _handleScenarioComplete = useCallback((report) => {
+    const scenario = SCENARIOS[scenarioId]
+    if (scenario?.isStory) {
+      const chapter = STORY_CHAPTERS.find(c => c.id === scenarioId)
+      if (chapter) {
+        const score = scoreChapter(report?.objectives || [])
+        // Update progress
+        setStoryProgress(prev => {
+          const updated = {
+            unlockedChapter: Math.max(prev.unlockedChapter, chapter.number + 1),
+            scores: { ...prev.scores, [chapter.id]: score }
+          }
+          saveStoryProgress(updated)
+          return updated
+        })
+        // Show outro instead of generic report card
+        setStoryOutro({ chapter, objectives: report?.objectives || [], score })
+        setPaused(true)
+        if (narrator.enabled) {
+          const key = score >= 65 ? 'excellent' : score >= 35 ? 'good' : 'poor'
+          narrator.speak(chapter.closingNarrative[key])
+        }
+        return
+      }
+    }
+    setReportCard(report)
+    setPaused(true)
+  }, [scenarioId, narrator])
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────────
   const sendToWorker = useCallback((msg) => {
     workerRef.current?.postMessage(msg)
   }, [])
 
+  const _resetSim = useCallback((id) => {
+    setSimState(null)
+    setCurrentInsight(null)
+    setSelectedAgent(null)
+    setPendingChoice(null)
+    setReportCard(null)
+    setStoryOutro(null)
+    sendToWorker({ type: 'RESET', scenarioId: id })
+    setPaused(false)
+  }, [sendToWorker])
+
+  // ─── Controls ─────────────────────────────────────────────────────────────────
   const handlePause = useCallback(() => {
     setPaused(true)
     sendToWorker({ type: 'PAUSE' })
@@ -85,14 +135,8 @@ export default function App() {
   }, [sendToWorker])
 
   const handleReset = useCallback(() => {
-    setSimState(null)
-    setCurrentInsight(null)
-    setSelectedAgent(null)
-    setPendingChoice(null)
-    setReportCard(null)
-    sendToWorker({ type: 'RESET', scenarioId })
-    setPaused(false)
-  }, [sendToWorker, scenarioId])
+    _resetSim(scenarioId)
+  }, [_resetSim, scenarioId])
 
   const handleSpeedChange = useCallback((s) => {
     setSpeed(s)
@@ -106,23 +150,37 @@ export default function App() {
       ...prev,
       policies: { ...prev.policies, [key]: validated }
     } : prev)
-    // Narrate weird law toggling
     narrator.onPolicy(key, validated)
   }, [sendToWorker, narrator])
 
-  const handleScenarioSelect = useCallback((id) => {
+  const handleModeSelect = useCallback((id) => {
+    if (id === '_reset_story') {
+      resetStoryProgress()
+      setStoryProgress({ unlockedChapter: 1, scores: {} })
+      return
+    }
+
+    const scenario = SCENARIOS[id]
+    const chapter = scenario?.isStory ? STORY_CHAPTERS.find(c => c.id === id) : null
+
     setScenarioId(id)
     saveScenario(id)
-    setSimState(null)
-    setCurrentInsight(null)
-    setSelectedAgent(null)
-    setPendingChoice(null)
-    setReportCard(null)
-    sendToWorker({ type: 'RESET', scenarioId: id })
-    setPaused(false)
-    // Switch to objectives tab for historical scenarios
-    if (SCENARIOS[id]?.isHistorical) setActiveTab('objectives')
-  }, [sendToWorker])
+
+    if (chapter) {
+      // Show chapter intro before starting
+      setStoryIntro(chapter)
+      // Pre-load sim but keep paused
+      _resetSim(id)
+      setPaused(true)
+      sendToWorker({ type: 'PAUSE' })
+      setActiveTab('objectives')
+      if (narrator.enabled) narrator.speak(chapter.kokoroNarration)
+    } else {
+      _resetSim(id)
+      if (scenario?.isHistorical) setActiveTab('objectives')
+      else setActiveTab('dashboard')
+    }
+  }, [_resetSim, sendToWorker, narrator])
 
   const handleShockMe = useCallback(() => {
     sendToWorker({ type: 'SET_POLICY', policy: '_forceShock', value: true })
@@ -141,10 +199,41 @@ export default function App() {
 
   const handleNextScenario = useCallback(() => {
     setReportCard(null)
-    setShowScenario(true)
+    setShowModeSelect(true)
   }, [])
 
+  // Story outro actions
+  const handleStoryReplay = useCallback(() => {
+    setStoryOutro(null)
+    _resetSim(scenarioId)
+    const chapter = STORY_CHAPTERS.find(c => c.id === scenarioId)
+    if (chapter) setStoryIntro(chapter)
+  }, [_resetSim, scenarioId])
+
+  const handleStoryNext = useCallback(() => {
+    const currentChapter = STORY_CHAPTERS.find(c => c.id === scenarioId)
+    const nextChapter = STORY_CHAPTERS.find(c => c.number === (currentChapter?.number || 0) + 1)
+    setStoryOutro(null)
+    if (nextChapter) {
+      handleModeSelect(nextChapter.id)
+    } else {
+      // Campaign complete — go to mode select
+      setShowModeSelect(true)
+    }
+  }, [scenarioId, handleModeSelect])
+
+  // Story intro: begin chapter
+  const handleStoryBegin = useCallback(() => {
+    setStoryIntro(null)
+    sendToWorker({ type: 'RESUME' })
+    setPaused(false)
+  }, [sendToWorker])
+
+  // ─── Derived ──────────────────────────────────────────────────────────────────
   const scenarioName = SCENARIOS[scenarioId]?.name || 'Free Market'
+  const currentScenario = SCENARIOS[scenarioId]
+  const isStoryMode = currentScenario?.isStory
+  const currentChapter = isStoryMode ? STORY_CHAPTERS.find(c => c.id === scenarioId) : null
 
   const hasObjectives = simState?.objectives?.length > 0
   const tabsToShow = hasObjectives ? TABS : TABS.filter(t => t !== 'objectives')
@@ -158,10 +247,14 @@ export default function App() {
         onResume={handleResume}
         onReset={handleReset}
         onSpeedChange={handleSpeedChange}
-        onScenarioOpen={() => setShowScenario(true)}
+        onScenarioOpen={() => setShowModeSelect(true)}
         onShockMe={handleShockMe}
         onStatsOpen={() => setShowStats(true)}
-        scenarioName={scenarioName}
+        scenarioName={
+          isStoryMode && currentChapter
+            ? `Ch.${currentChapter.number} ${currentChapter.title}`
+            : scenarioName
+        }
         year={simState?.year}
         narratorEnabled={narrator.enabled}
         narratorLoading={narrator.loading}
@@ -178,6 +271,16 @@ export default function App() {
           />
           {selectedAgent && (
             <AgentTooltip agent={selectedAgent} onClose={() => setSelectedAgent(null)} />
+          )}
+
+          {/* Story chapter banner */}
+          {isStoryMode && currentChapter && !storyIntro && !storyOutro && (
+            <div
+              className="absolute top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-xs font-mono font-bold pointer-events-none"
+              style={{ background: currentChapter.color + '22', border: `1px solid ${currentChapter.color}44`, color: currentChapter.color }}
+            >
+              📖 Chapter {currentChapter.number}: {currentChapter.title} · {currentChapter.era}
+            </div>
           )}
         </div>
 
@@ -240,8 +343,8 @@ export default function App() {
         <EventChoiceModal event={pendingChoice} onChoose={handleChoiceResolved} />
       )}
 
-      {/* Scenario complete report card */}
-      {reportCard && (
+      {/* Generic report card (non-story) */}
+      {reportCard && !isStoryMode && (
         <ReportCard report={reportCard} onRetry={handleRetry} onNextScenario={handleNextScenario} />
       )}
 
@@ -254,12 +357,39 @@ export default function App() {
         />
       )}
 
-      {/* Scenario picker */}
-      {showScenario && (
-        <ScenarioSelect
+      {/* Story chapter intro */}
+      {storyIntro && (
+        <StoryIntro
+          chapter={storyIntro}
+          onBegin={handleStoryBegin}
+          onBack={() => { setStoryIntro(null); setShowModeSelect(true) }}
+          chapterScore={
+            storyIntro.number > 1
+              ? storyProgress.scores?.[STORY_CHAPTERS[storyIntro.number - 2]?.id]
+              : undefined
+          }
+        />
+      )}
+
+      {/* Story chapter outro */}
+      {storyOutro && (
+        <StoryOutro
+          chapter={storyOutro.chapter}
+          objectives={storyOutro.objectives}
+          score={storyOutro.score}
+          onReplay={handleStoryReplay}
+          onNextChapter={handleStoryNext}
+          isLastChapter={storyOutro.chapter.number === STORY_CHAPTERS.length}
+        />
+      )}
+
+      {/* Mode selector (replaces old ScenarioSelect) */}
+      {showModeSelect && (
+        <ModeSelect
           current={scenarioId}
-          onSelect={handleScenarioSelect}
-          onClose={() => setShowScenario(false)}
+          onSelect={(id) => { handleModeSelect(id); setShowModeSelect(false) }}
+          onClose={() => setShowModeSelect(false)}
+          storyProgress={storyProgress}
         />
       )}
     </div>

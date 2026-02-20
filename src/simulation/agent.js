@@ -205,6 +205,7 @@ export class Agent {
   }
 
   _consumeGoods(prices, policies) {
+    if (!prices) return
     let totalExpenses = 0
     const income = this.wage || 0
 

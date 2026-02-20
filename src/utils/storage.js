@@ -1,6 +1,7 @@
 // Save/load simulation state via localStorage + URL sharing
 
 const SAVE_KEY = 'ecomsim_save'
+const STORY_KEY = 'ecomsim_story'
 
 export function savePolicies(policies) {
   try {
@@ -63,6 +64,25 @@ export function urlHashToPolicies(hash) {
 export function getShareUrl(policies) {
   const base = window.location.origin + window.location.pathname
   return base + policiesToUrlHash(policies)
+}
+
+// ─── Story mode progress ─────────────────────────────────────────────────────
+
+export function saveStoryProgress(progress) {
+  try { localStorage.setItem(STORY_KEY, JSON.stringify(progress)) } catch (e) {}
+}
+
+export function loadStoryProgress() {
+  try {
+    const raw = localStorage.getItem(STORY_KEY)
+    return raw ? JSON.parse(raw) : { unlockedChapter: 1, scores: {} }
+  } catch {
+    return { unlockedChapter: 1, scores: {} }
+  }
+}
+
+export function resetStoryProgress() {
+  try { localStorage.removeItem(STORY_KEY) } catch (e) {}
 }
 
 export function copyShareUrl(policies) {

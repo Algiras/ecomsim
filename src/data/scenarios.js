@@ -343,10 +343,35 @@ export const SCENARIOS = {
   }
 }
 
+// ─── Story Mode chapters injected as scenarios ───────────────────────────────
+import { STORY_CHAPTERS } from './storyMode.js'
+
+for (const ch of STORY_CHAPTERS) {
+  SCENARIOS[ch.id] = {
+    id: ch.id,
+    name: ch.title,
+    subtitle: ch.era,
+    description: ch.tagline,
+    icon: ch.icon,
+    difficulty: `Chapter ${ch.number}`,
+    color: ch.color,
+    isHistorical: false,
+    isStory: true,
+    storyChapterNumber: ch.number,
+    durationYears: ch.durationYears,
+    era: ch.era,
+    lesson: ch.tagline,
+    scheduledEvents: ch.scheduledEvents || [],
+    ...ch.scenarioConfig,
+    policies: ch.scenarioConfig.policies
+  }
+}
+
 export function getScenario(id) {
   return SCENARIOS[id] || SCENARIOS.freeMarket
 }
 
 export const SCENARIO_LIST = Object.values(SCENARIOS)
-export const SANDBOX_SCENARIOS = SCENARIO_LIST.filter(s => !s.isHistorical)
+export const SANDBOX_SCENARIOS = SCENARIO_LIST.filter(s => !s.isHistorical && !s.isStory)
 export const HISTORICAL_SCENARIOS = SCENARIO_LIST.filter(s => s.isHistorical)
+export const STORY_SCENARIOS = SCENARIO_LIST.filter(s => s.isStory)
