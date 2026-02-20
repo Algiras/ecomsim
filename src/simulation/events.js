@@ -9,7 +9,11 @@ export const EVENT_TYPES = {
   CORRUPTION: 'corruption',
   IMMIGRATION_WAVE: 'immigrationWave',
   RECESSION: 'recession',
-  BOOM: 'boom'
+  BOOM: 'boom',
+  HYPERINFLATION: 'hyperinflation',
+  GENERAL_STRIKE: 'generalStrike',
+  BANK_RUN: 'bankRun',
+  BRAIN_DRAIN: 'brainDrain'
 }
 
 const EVENT_DEFINITIONS = {
@@ -253,6 +257,179 @@ const EVENT_DEFINITIONS = {
       hiringBoost: true,
       wageGrowthRate: 1.02
     }
+  },
+
+  [EVENT_TYPES.HYPERINFLATION]: {
+    name: 'Hyperinflation Spiral',
+    description: 'Prices are doubling every few weeks. Currency is losing value faster than anyone can spend it. People are using wheelbarrows of cash to buy bread. What do you do?',
+    duration: 300,
+    icon: '💸',
+    effects: {
+      priceMultiplierPerTick: 1.008,
+      wageErosionRate: 0.005,
+      savingsDestructionRate: 0.01
+    },
+    choices: [
+      {
+        id: 'currency_reform',
+        label: 'Currency Reform',
+        emoji: '🪙',
+        description: 'Issue a new currency. Peg it to gold or a foreign reserve. Immediately restore confidence — if anyone believes you.',
+        tradeoff: 'Stops inflation fast. Requires credibility and foreign reserves. Painful one-time wealth reset.',
+        historicalNote: 'Germany\'s 1923 Rentenmark replaced the worthless Mark overnight. Inflation stopped within weeks — but required complete institutional trust.',
+        effectOverride: { priceMultiplierPerTick: 1.0, wageErosionRate: 0, savingsDestructionRate: 0, duration: 50 },
+        govDebtPenalty: 500
+      },
+      {
+        id: 'interest_rate_shock',
+        label: 'Shock Interest Rates',
+        emoji: '🏦',
+        description: 'Raise interest rates to 20%+. Crush demand. Stop the money printing. It will cause a severe recession.',
+        tradeoff: 'Kills inflation but triggers mass unemployment and recession. Volcker shock medicine.',
+        historicalNote: 'Paul Volcker (1980-82) raised US rates to 20% to kill stagflation. Inflation died. So did 2 years of growth.',
+        effectOverride: { priceMultiplierPerTick: 1.001, wageErosionRate: 0.002, savingsDestructionRate: 0.003, duration: 150 },
+        policyOverrides: { interestRate: 0.20, printMoney: 0 }
+      },
+      {
+        id: 'price_freeze',
+        label: 'Emergency Price Freeze',
+        emoji: '🧊',
+        description: 'Legally freeze all prices where they are. Sounds good. Historically causes shortages, black markets, and collapse within months.',
+        tradeoff: 'Appears to stop inflation on paper. Creates chronic shortages and black markets.',
+        historicalNote: 'Nixon\'s 1971 price controls temporarily stopped inflation — then it came back worse. Venezuela\'s price controls in 2010s caused empty supermarkets.',
+        effectOverride: { priceMultiplierPerTick: 1.0, wageErosionRate: 0.003, savingsDestructionRate: 0.008, duration: 400 },
+        policyOverrides: { priceControlFood: true, priceControlHousing: true }
+      }
+    ]
+  },
+
+  [EVENT_TYPES.GENERAL_STRIKE]: {
+    name: 'General Strike',
+    description: 'Workers across every sector have walked off the job. Production has stopped. Shelves are emptying. The labor movement is demanding radical change. How do you respond?',
+    duration: 180,
+    icon: '✊',
+    effects: {
+      productionMultiplier: 0.1,
+      businessCapitalDrain: 0.03,
+      unrestLevel: 0.8
+    },
+    choices: [
+      {
+        id: 'negotiate',
+        label: 'Negotiate with Workers',
+        emoji: '🤝',
+        description: 'Meet with union leaders. Accept major wage increases and worker protections. End the strike through concessions.',
+        tradeoff: 'Strike ends quickly. Wages rise significantly. Businesses face higher costs. May trigger inflation.',
+        historicalNote: 'UK 1926 General Strike ended after 9 days. Government conceded little. Workers returned defeated. France 1968 — de Gaulle negotiated wage increases of 35%.',
+        effectOverride: { productionMultiplier: 0.9, businessCapitalDrain: 0.005, unrestLevel: 0.2, duration: 80 },
+        policyOverrides: { minWage: 18 }
+      },
+      {
+        id: 'crack_down',
+        label: 'Call In the Military',
+        emoji: '🪖',
+        description: 'Declare the strike illegal. Deploy security forces to reopen businesses. Arrest strike leaders.',
+        tradeoff: 'Strike ends by force. Short-term production resumes. Generates massive unrest. Long-term labor relations destroyed.',
+        historicalNote: 'Tsar Nicholas II cracked down on 1905 strikes. Workers returned, resentment grew, revolution followed 12 years later.',
+        effectOverride: { productionMultiplier: 0.7, businessCapitalDrain: 0.01, unrestLevel: 0.95, duration: 100 }
+      },
+      {
+        id: 'meet_demands',
+        label: 'Meet All Demands',
+        emoji: '📋',
+        description: 'Full capitulation. Massive wage increases, worker ownership rights, reduced hours. Businesses will struggle to absorb the costs.',
+        tradeoff: 'Strike ends immediately. Workers are ecstatic. Many businesses go bankrupt within months.',
+        historicalNote: 'Bolivia\'s 1952 revolution saw workers seize mines. Production collapsed 40% initially before new management stabilized.',
+        effectOverride: { productionMultiplier: 0.95, businessCapitalDrain: 0.02, unrestLevel: 0.05, duration: 50 },
+        policyOverrides: { minWage: 25, mandatoryProfitShare: 0.20 }
+      }
+    ]
+  },
+
+  [EVENT_TYPES.BANK_RUN]: {
+    name: 'Bank Run',
+    description: 'Citizens are lining up to withdraw everything from the banks. The financial system has 48 hours before it collapses completely. Businesses cannot make payroll. What do you do?',
+    duration: 200,
+    icon: '🏦',
+    effects: {
+      wealthDestructionRate: 0.04,
+      businessCapitalCrash: 0.5,
+      hiringSuppression: true
+    },
+    choices: [
+      {
+        id: 'deposit_guarantee',
+        label: 'Guarantee All Deposits',
+        emoji: '🛡️',
+        description: 'Government guarantees every citizen\'s deposits are safe. Panic stops immediately. Costs are enormous.',
+        tradeoff: 'Stops the run instantly. Restores confidence. Massive contingent liability on the government.',
+        historicalNote: 'FDR\'s FDIC (1933) deposit guarantee ended the Great Depression bank runs overnight. Still the gold standard.',
+        effectOverride: { wealthDestructionRate: 0.002, businessCapitalCrash: 0.9, hiringSuppression: false, duration: 50 },
+        govDebtPenalty: 3000
+      },
+      {
+        id: 'bank_holiday',
+        label: 'Declare a Bank Holiday',
+        emoji: '🚪',
+        description: 'Close all banks for a week. Force a pause. Use the time to audit, restructure, or recapitalize.',
+        tradeoff: 'Buys time but deepens the panic. Economic activity freezes completely during the holiday.',
+        historicalNote: 'FDR declared a bank holiday in March 1933. When banks reopened 4 days later, the runs had stopped — but the pause was painful.',
+        effectOverride: { wealthDestructionRate: 0.01, businessCapitalCrash: 0.3, hiringSuppression: true, duration: 150 },
+        govDebtPenalty: 1000
+      },
+      {
+        id: 'let_banks_fail',
+        label: 'Let Them Fail',
+        emoji: '💀',
+        description: 'No bailouts. Insolvent banks deserve to collapse. Creative destruction will rebuild stronger institutions.',
+        tradeoff: 'Short-term economic catastrophe. Possibly long-term healthy reset. Historically devastating.',
+        historicalNote: 'Hoover let 4,000 US banks fail 1930-33. GDP fell 30%. Unemployment hit 25%. "Creative destruction" was not creative.',
+        effectOverride: { wealthDestructionRate: 0.06, businessCapitalCrash: 0.15, hiringSuppression: true, duration: 350 }
+      }
+    ]
+  },
+
+  [EVENT_TYPES.BRAIN_DRAIN]: {
+    name: 'Brain Drain',
+    description: 'Your most skilled workers are leaving. High taxes, low opportunity, political instability — whatever the reason, talent is exiting fast. Businesses are struggling to fill key roles.',
+    duration: 250,
+    icon: '🧠',
+    effects: {
+      skillErosionRate: 0.002,
+      highSkillExitProbability: 0.01,
+      productivityDecay: 0.998
+    },
+    choices: [
+      {
+        id: 'talent_incentives',
+        label: 'Talent Retention Package',
+        emoji: '💰',
+        description: 'Tax breaks and bonuses for high-skill workers. Make staying worth their while.',
+        tradeoff: 'Slows emigration. Costs revenue. Creates a two-tier tax system that others resent.',
+        historicalNote: 'Ireland\'s special artist tax exemption attracted many creatives. Singapore\'s talent visa system draws global elites.',
+        effectOverride: { skillErosionRate: 0.0003, highSkillExitProbability: 0.001, productivityDecay: 0.9995, duration: 150 },
+        govDebtPenalty: 600
+      },
+      {
+        id: 'open_immigration',
+        label: 'Open Skilled Immigration',
+        emoji: '🌍',
+        description: 'Replace departing talent with immigrants. Fast-track visas for skilled workers globally.',
+        tradeoff: 'Partially offsets the drain. Different skills may not perfectly match. Cultural adjustment takes time.',
+        historicalNote: 'Canada\'s points-based immigration system and the US H-1B visa program replace brain drain with brain gain.',
+        effectOverride: { skillErosionRate: 0.001, highSkillExitProbability: 0.005, productivityDecay: 0.999, duration: 200 },
+        policyOverrides: { openBorders: true }
+      },
+      {
+        id: 'ignore_it',
+        label: 'Let Them Leave',
+        emoji: '👋',
+        description: 'Good riddance to elites. The working class will step up. Skills can be rebuilt from within.',
+        tradeoff: 'No cost. Significant long-term productivity collapse as expertise exits permanently.',
+        historicalNote: 'Zimbabwe\'s post-2000 land reform drove out skilled farmers and professionals. GDP fell 50%. 3 million skilled workers fled.',
+        effectOverride: { skillErosionRate: 0.004, highSkillExitProbability: 0.02, productivityDecay: 0.993, duration: 400 }
+      }
+    ]
   }
 }
 
@@ -345,7 +522,12 @@ function _triggerRandomEvent(eventsState, state, policies, tick) {
     [EVENT_TYPES.CORRUPTION]: metrics.govDebt > 1000 ? 2 : 0.5,
     [EVENT_TYPES.IMMIGRATION_WAVE]: policies.openBorders ? 3 : 0.5,
     [EVENT_TYPES.RECESSION]: metrics.inflation > 5 ? 2 : 0.3,
-    [EVENT_TYPES.BOOM]: metrics.unemployment < 0.05 ? 2 : 0.5
+    [EVENT_TYPES.BOOM]: metrics.unemployment < 0.05 ? 2 : 0.5,
+    // New chaos events — more likely in troubled economies
+    [EVENT_TYPES.HYPERINFLATION]: (policies.printMoney > 20 || metrics.inflation > 10) ? 3 : 0.3,
+    [EVENT_TYPES.GENERAL_STRIKE]: metrics.gini > 0.55 ? 2 : (metrics.unemployment > 0.15 ? 1.5 : 0.3),
+    [EVENT_TYPES.BANK_RUN]: (metrics.govDebt > 3000 || metrics.inflation > 8) ? 2 : 0.3,
+    [EVENT_TYPES.BRAIN_DRAIN]: (policies.wealthConfiscation > 0.1 || policies.maximumWage > 0) ? 2 : 0.4
   }
 
   const types = Object.keys(weights)
@@ -438,6 +620,36 @@ function _applyImmediateEffects(event, state) {
         b.productivity *= effects.techProductivityMultiplier
       }
       break
+
+    case EVENT_TYPES.BANK_RUN:
+      // Immediate: businesses lose half their capital
+      for (const b of aliveBusinesses) {
+        b.capital *= effects.businessCapitalCrash
+      }
+      // Agents lose a chunk of wealth (savings in banks)
+      for (const a of aliveAgents) {
+        a.wealth *= (1 - effects.wealthDestructionRate * 5)
+        a.wealth = Math.max(0, a.wealth)
+      }
+      break
+
+    case EVENT_TYPES.GENERAL_STRIKE:
+      // All businesses immediately go to minimum production
+      for (const b of aliveBusinesses) {
+        b.production = (b.production || 1) * 0.15
+      }
+      break
+
+    case EVENT_TYPES.BRAIN_DRAIN:
+      // Immediately remove top 10% of skilled workers
+      {
+        const skilled = aliveAgents.filter(a => a.skill > 0.75).sort((a, b) => b.skill - a.skill)
+        const exitCount = Math.floor(skilled.length * 0.15)
+        for (const a of skilled.slice(0, exitCount)) {
+          a.alive = false  // emigrated
+        }
+      }
+      break
   }
 }
 
@@ -490,6 +702,54 @@ function _applyEventEffects(event, state, policies, tick) {
       if (Math.random() < 0.05) {
         for (const b of state.businesses.filter(b => b.alive)) {
           b.wageOffered *= effects.wageGrowthRate
+        }
+      }
+      break
+
+    case EVENT_TYPES.HYPERINFLATION:
+      // Prices spiral upward each tick
+      if (state.market?.prices) {
+        for (const sector of Object.keys(state.market.prices)) {
+          state.market.prices[sector] *= effects.priceMultiplierPerTick
+        }
+      }
+      // Savings eroded — agents lose wealth to inflation
+      if (Math.random() < 0.1) {
+        for (const a of state.agents.filter(a => a.alive && a.wealth > 0)) {
+          a.wealth *= (1 - effects.savingsDestructionRate)
+        }
+      }
+      break
+
+    case EVENT_TYPES.GENERAL_STRIKE:
+      // Ongoing production suppression
+      if (Math.random() < 0.15) {
+        for (const b of state.businesses.filter(b => b.alive)) {
+          b.capital -= b.capital * effects.businessCapitalDrain
+        }
+      }
+      break
+
+    case EVENT_TYPES.BANK_RUN:
+      // Ongoing wealth destruction and hiring freeze
+      if (Math.random() < 0.05) {
+        for (const a of state.agents.filter(a => a.alive)) {
+          a.wealth *= (1 - effects.wealthDestructionRate)
+          a.wealth = Math.max(0, a.wealth)
+        }
+      }
+      break
+
+    case EVENT_TYPES.BRAIN_DRAIN:
+      // Ongoing skill erosion in remaining workforce
+      if (Math.random() < 0.02) {
+        const skilled = state.agents.filter(a => a.alive && a.skill > 0.6)
+        for (const a of skilled) {
+          a.skill = clamp(a.skill - effects.skillErosionRate, 0, 1)
+          // Small probability of emigration each tick
+          if (Math.random() < effects.highSkillExitProbability) {
+            a.alive = false
+          }
         }
       }
       break

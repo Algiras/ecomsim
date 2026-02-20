@@ -75,6 +75,32 @@ export const NARRATION_SCRIPTS = {
   policy_universalBankAccount_off:
     "Universal bank accounts discontinued. Financial exclusion returns for the poorest citizens.",
 
+  // Chaos lever activations
+  policy_helicopterMoney_on:
+    "Helicopter money is airborne. Cash is literally raining from the sky. Every citizen is richer — briefly. Inflation is watching from below, grinning.",
+  policy_helicopterMoney_off:
+    "The helicopter has landed. The free money spigot is closed. Prices remain elevated.",
+  policy_maximumWage_on:
+    "A maximum wage is now law. No one earns above the cap. Executives are furious. Economists are concerned about brain drain. The people are delighted.",
+  policy_maximumWage_off:
+    "Maximum wage repealed. Compensation limits removed. The talent exodus risk is over.",
+  policy_wealthConfiscation_on:
+    "Wealth confiscation is in effect. Government agents are seizing assets above the threshold. The rich are moving money offshore as fast as they can.",
+  policy_wealthConfiscation_off:
+    "Wealth confiscation has ended. Assets are safe again — for now.",
+  policy_nationalizeIndustries_on:
+    "All industries are now nationalized. The government owns the means of production. Five-year plans are being drafted. Entrepreneurs are unemployed. Productivity is in freefall.",
+  policy_nationalizeIndustries_off:
+    "Privatization has begun. Industries are returning to private hands. Markets are chaotic but slowly returning to life.",
+  policy_punitiveTargiffs_on:
+    "Punitive tariffs are in place. All goods are now more expensive. This is to protect the economy, apparently. Consumers are paying the price — literally.",
+  policy_punitiveTargiffs_off:
+    "Tariffs removed. Trade barriers down. Prices begin to normalize.",
+  policy_guaranteedJobs_on:
+    "A guaranteed jobs program is active. Every unemployed citizen now works for the government. Unemployment is officially zero. The budget is officially catastrophic.",
+  policy_guaranteedJobs_off:
+    "Guaranteed jobs program ended. Government workers are being released back to the private market.",
+
   // Events
   pandemic:
     "A pandemic has struck. Health is dropping, businesses are closing, and workers are staying home.",
@@ -91,7 +117,15 @@ export const NARRATION_SCRIPTS = {
   recession:
     "Recession begins. Consumer demand is falling, businesses are struggling, and unemployment is rising.",
   boom:
-    "Economic boom! Consumer confidence has surged. Businesses are hiring and wages are growing."
+    "Economic boom! Consumer confidence has surged. Businesses are hiring and wages are growing.",
+  hyperinflation:
+    "Hyperinflation. Prices are doubling faster than wages can keep up. The currency is becoming worthless. Wheelbarrows of cash are not yet required — but give it time.",
+  generalStrike:
+    "General strike! Workers across every sector have walked off the job. Production has stopped. The economy is frozen. History will judge what you do next.",
+  bankRun:
+    "Bank run! Panic is spreading. Citizens are lining up to withdraw everything. The financial system has hours before it collapses. Decide fast.",
+  brainDrain:
+    "Brain drain underway. Your most skilled citizens are packing their bags. Once expertise leaves, it rarely comes back. The productivity gap will compound for decades."
 }
 
 async function ensureLoaded() {

@@ -134,7 +134,14 @@ export const DEFAULT_POLICIES = {
   sumptuary: false,
   degrowth: false,
   algoCentralPlanning: false,
-  universalBankAccount: false
+  universalBankAccount: false,
+  // ─── Chaos Levers ─────────────────────────────────────────────────────────
+  helicopterMoney: 0,         // $ dropped to every citizen per tick (0 = off)
+  maximumWage: 0,             // hard income cap (0 = off)
+  wealthConfiscation: 0,      // 0–0.5 fraction seized above $1000 threshold
+  nationalizeIndustries: false,
+  punitiveTargiffs: 0,        // 0–2.0 = 0–200% price surcharge on all goods
+  guaranteedJobs: false
 }
 
 // ─── Economic shocks ─────────────────────────────────────────────────────────

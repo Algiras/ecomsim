@@ -197,6 +197,85 @@ export function applyPolicyEffects(state, policies, market) {
       }
     }
   }
+
+  // ─── Chaos Levers ──────────────────────────────────────────────────────────
+
+  // Helicopter money: direct cash drop to every citizen each tick
+  if (policies.helicopterMoney > 0) {
+    const drop = policies.helicopterMoney * 0.01  // scaled so slider feels right
+    for (const a of agents.filter(a => a.alive)) {
+      a.wealth += drop
+    }
+    // Drives inflation via market.js price pressure (more demand = higher prices)
+    state.govBudget = (state.govBudget || 0) - drop * agents.filter(a => a.alive).length * 0.1
+  }
+
+  // Maximum wage: cap wages and income for all agents
+  if (policies.maximumWage > 0) {
+    for (const b of businesses.filter(b => b.alive)) {
+      if (b.wageOffered > policies.maximumWage) {
+        b.wageOffered = policies.maximumWage
+      }
+    }
+    // High earners accumulate resentment (emigration proxy — slowly lose skill)
+    if (Math.random() < 0.002) {
+      for (const a of agents.filter(a => a.alive && a.skill > 0.7)) {
+        a.skill = clamp(a.skill - 0.001, 0, 1)  // brain drain
+      }
+    }
+  }
+
+  // Wealth confiscation: seize fraction of wealth above $1000 threshold
+  if (policies.wealthConfiscation > 0) {
+    for (const a of agents.filter(a => a.alive && a.wealth > 1000)) {
+      const seizure = (a.wealth - 1000) * policies.wealthConfiscation * 0.01
+      a.wealth -= seizure
+      state.govBudget = (state.govBudget || 0) + seizure
+    }
+  }
+
+  // Nationalize industries: gov controls all businesses, flat wages, production penalty
+  if (policies.nationalizeIndustries) {
+    for (const b of businesses.filter(b => b.alive)) {
+      b._nationalized = true
+      // Override wage to flat government rate
+      const flatWage = Math.max(policies.minWage || 10, 15)
+      b.wageOffered = flatWage
+      // Production penalty — no profit incentive
+      b.production = (b.production || 1) * 0.92
+      // Gov pays the wages
+      state.govBudget = (state.govBudget || 0) - b.employees.length * flatWage * 0.001
+    }
+  } else {
+    for (const b of businesses.filter(b => b._nationalized)) {
+      delete b._nationalized
+    }
+  }
+
+  // Punitive tariffs: inflate all market prices
+  if (policies.punitiveTargiffs > 0 && market?.prices) {
+    for (const sector of Object.keys(market.prices)) {
+      // Gradually inflate prices each tick
+      market.prices[sector] *= (1 + policies.punitiveTargiffs * 0.0002)
+    }
+  }
+
+  // Guaranteed jobs: gov employs all unemployed agents at minimum wage
+  if (policies.guaranteedJobs) {
+    const unemployed = agents.filter(a => a.alive && !a.employed && a.age > 18 * 52)
+    for (const a of unemployed) {
+      a.employed = true
+      a._govJob = true
+      a.wage = Math.max(policies.minWage || 10, 12)
+      a.wealth += a.wage * 0.001
+    }
+    state.govBudget = (state.govBudget || 0) - unemployed.length * (policies.minWage || 12) * 0.001
+  } else {
+    for (const a of agents.filter(a => a._govJob)) {
+      delete a._govJob
+      // They don't automatically get fired — labor market will sort it
+    }
+  }
 }
 
 export function validatePolicy(key, value) {
@@ -213,7 +292,12 @@ export function validatePolicy(key, value) {
     // Weird laws
     robotTax: [0, 0.5],
     mandatoryProfitShare: [0, 0.3],
-    landValueTax: [0, 0.05]
+    landValueTax: [0, 0.05],
+    // Chaos levers
+    helicopterMoney: [0, 500],
+    maximumWage: [0, 500],
+    wealthConfiscation: [0, 0.5],
+    punitiveTargiffs: [0, 2.0]
   }
 
   if (key in bounds) {

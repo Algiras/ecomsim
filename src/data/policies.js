@@ -291,6 +291,78 @@ export const POLICY_DEFINITIONS = [
     icon: '🏧',
     description: 'Every citizen gets a free government bank account. Reduces financial exclusion, enables direct transfers, improves savings rates.',
     tradeoff: '↑ Financial inclusion + savings but ↑ Gov infrastructure cost'
+  },
+
+  // ─── Chaos Levers ────────────────────────────────────────────────────────────
+  {
+    id: 'helicopterMoney',
+    name: 'Helicopter Money',
+    category: 'chaos',
+    type: 'slider',
+    min: 0,
+    max: 500,
+    step: 10,
+    format: 'currency',
+    icon: '🚁',
+    description: 'Drop cash directly into every citizen\'s pocket every tick. Milton Friedman\'s thought experiment. Pure demand stimulus — with pure inflation consequences.',
+    tradeoff: '↑↑ Demand and spending but ↑↑↑ Inflation — eventually hyperinflation'
+  },
+  {
+    id: 'maximumWage',
+    name: 'Maximum Wage',
+    category: 'chaos',
+    type: 'slider',
+    min: 0,
+    max: 500,
+    step: 10,
+    format: 'currency',
+    icon: '🔒',
+    description: 'Hard cap on how much anyone can earn. Income above the limit is confiscated. No CEO mega-salaries allowed. Brain drain incoming.',
+    tradeoff: '↓ Inequality and Gini but ↑ Risk of skill emigration and talent suppression'
+  },
+  {
+    id: 'wealthConfiscation',
+    name: 'Wealth Confiscation',
+    category: 'chaos',
+    type: 'slider',
+    min: 0,
+    max: 0.5,
+    step: 0.05,
+    format: 'percent',
+    icon: '🪓',
+    description: 'Seize a portion of all wealth above $1000. Not a tax — an outright seizure. The rich will not be happy. Capital flight begins immediately.',
+    tradeoff: '↓↓ Gini immediately but ↑ Capital flight, investment collapse, and rich agent rage'
+  },
+  {
+    id: 'nationalizeIndustries',
+    name: 'Nationalize Industries',
+    category: 'chaos',
+    type: 'toggle',
+    icon: '🏭',
+    description: 'The government takes over all private businesses. Workers get flat wages. Production is "planned." The invisible hand is replaced by a five-year plan.',
+    tradeoff: '↓ Unemployment but ↓↓ Productivity, ↑ Gov costs, and businesses stop innovating'
+  },
+  {
+    id: 'punitiveTargiffs',
+    name: 'Punitive Tariffs',
+    category: 'chaos',
+    type: 'slider',
+    min: 0,
+    max: 2.0,
+    step: 0.1,
+    format: 'percent',
+    icon: '🚧',
+    description: 'Slap a massive surcharge on all goods. "Protecting" the economy. In practice: prices skyrocket, consumers suffer, trading partners retaliate.',
+    tradeoff: '↑↑ Prices (inflation) and ↓ Real wages — the Smoot-Hawley special'
+  },
+  {
+    id: 'guaranteedJobs',
+    name: 'Guaranteed Jobs Program',
+    category: 'chaos',
+    type: 'toggle',
+    icon: '👷',
+    description: 'The government employs every unemployed citizen at minimum wage. Unemployment vanishes on paper. The government payroll explodes.',
+    tradeoff: '↓ Unemployment to 0% but ↑↑↑ Government spending and budget deficit'
   }
 ]
 
@@ -301,5 +373,6 @@ export const POLICY_CATEGORIES = {
   welfare: { label: 'Welfare', color: '#ec4899' },
   regulation: { label: 'Regulation', color: '#8b5cf6' },
   public: { label: 'Public Services', color: '#06b6d4' },
-  weird: { label: '⚗️ Weird Laws', color: '#f97316' }
+  weird: { label: '⚗️ Weird Laws', color: '#f97316' },
+  chaos: { label: '💣 Chaos Levers', color: '#dc2626' }
 }
