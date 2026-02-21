@@ -804,7 +804,7 @@ export class SimEngine {
     }
 
     // Absolute penalties
-    if (m.inflation > 5) delta -= (m.inflation - 5) * 0.3
+    if (m.inflation > 8) delta -= (m.inflation - 8) * 0.15
     if (m.povertyRate > 0.3) delta -= 1
     if (m.socialUnrest > 0.5) delta -= m.socialUnrest * 2
     if ((m.crimeRate || 0) > 0.3) delta -= 1

@@ -55,21 +55,28 @@ export function updatePrices(market, state, policies, tradeFlows = {}) {
 
     let demand = aliveAgents.length * avgIncome * (demandPerAgent[sector] || 0.1)
 
-    // Random demand shock per sector: ±8% noise creates natural business cycles
-    demand *= (0.92 + Math.random() * 0.16)
+    // Random demand shock per sector: ±10% noise creates natural business cycles
+    demand *= (0.90 + Math.random() * 0.20)
 
     // Debt-deflation drag suppresses demand
     demand *= (1 - (market.deflationDrag || 0))
 
-    // Asset price channel: low interest rates inflate housing demand
-    if (sector === 'housing') {
-      const rateGap = Math.max(0, 0.05 - (policies.interestRate || 0.05))
-      demand *= 1 + rateGap * 20
+    // Interest rate channel: low rates boost demand across all sectors, high rates suppress
+    const rate = policies.interestRate || 0.05
+    const rateGap = 0.05 - rate // positive when rates are low
+    const creditMultiplier = sector === 'housing'
+      ? 1 + rateGap * 25   // housing most sensitive to rates
+      : 1 + rateGap * 8    // other sectors still affected via credit/spending
+    demand *= Math.max(0.5, creditMultiplier)
+
+    // Helicopter money boosts demand directly (people spend the cash)
+    if (policies.helicopterMoney > 0) {
+      demand += aliveAgents.length * policies.helicopterMoney * (demandPerAgent[sector] || 0.1) * 0.8
     }
 
     // Inflation expectations boost demand (self-fulfilling)
     const avgExp = market.avgExpectedInflation || 0.02
-    demand *= 1 + Math.max(0, avgExp - 0.02) * 3
+    demand *= 1 + Math.max(0, avgExp - 0.02) * 5
 
     market.supply[sector] = supply
     market.demand[sector] = demand
@@ -89,17 +96,29 @@ export function updatePrices(market, state, policies, tradeFlows = {}) {
       priceChange = clamp(priceChange, -0.01, 0.01)
     }
 
-    // Money printing causes inflation
+    // Money printing causes inflation (monetary expansion)
     if (policies.printMoney > 0) {
-      priceChange += policies.printMoney * 0.0001
+      priceChange += policies.printMoney * 0.001
+    }
+
+    // Wage-price spiral: when avg wages rise above baseline, costs push prices up
+    const baseWage = 15
+    if (avgIncome > baseWage) {
+      const wagePressure = (avgIncome - baseWage) / baseWage
+      priceChange += wagePressure * 0.003
     }
 
     // Food price → inflation amplifier: food costs drive everything up
     const foodPrice = market.prices.food || 10
     if (foodPrice > 30) {
-      priceChange += 0.002  // food crisis drives all prices up
+      priceChange += 0.003  // food crisis drives all prices up
     } else if (foodPrice > 20) {
-      priceChange += 0.0005 // cost-of-living pass-through
+      priceChange += 0.001  // cost-of-living pass-through
+    }
+
+    // Tariffs increase domestic prices
+    if (policies.punitiveTargiffs > 0) {
+      priceChange += policies.punitiveTargiffs * 0.002
     }
 
     const oldPrice = market.prices[sector]
@@ -144,7 +163,8 @@ export function updatePrices(market, state, policies, tradeFlows = {}) {
     return sum + (market.prices[s] / market.basePrices[s]) * cpiWeights[s] * 100
   }, 0)
 
-  market.inflation = totalInflation / SECTORS.length
+  // Store per-tick inflation rate (annualize by ×52 since 1 tick ≈ 1 week)
+  market.inflation = (totalInflation / SECTORS.length) * 52
 
   // Update business market share / dominance
   _updateMarketShare(aliveBusinesses)
