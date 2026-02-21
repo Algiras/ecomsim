@@ -11,7 +11,8 @@ import { createGlobalEconomyState, tickGlobalEconomy } from './globalEconomy.js'
 import { SCENARIO_OBJECTIVES, evaluateObjective, objectiveProgress } from '../data/objectives.js'
 import {
   INITIAL_AGENTS, INITIAL_BUSINESSES, METRICS_UPDATE_EVERY,
-  WORKER_UPDATE_EVERY, STARTUP_PROBABILITY, POLICY_LAG_TICKS
+  WORKER_UPDATE_EVERY, STARTUP_PROBABILITY, POLICY_LAG_TICKS,
+  RICH_THRESHOLD
 } from '../utils/constants.js'
 import { normalRand, clamp } from '../utils/math.js'
 import { ACHIEVEMENTS, MILESTONES, computeScore } from '../data/achievements.js'
@@ -25,7 +26,20 @@ export class SimEngine {
 
     this.policies = createPolicyState(scenario.policies || {})
     this.market = createMarketState()
+    // Seed initial market state (for tutorials with pre-broken prices)
+    // Deep-copy to avoid mutating the scenario config during simulation
+    if (scenario.startMarket) {
+      const { prices, ...rest } = scenario.startMarket
+      Object.assign(this.market, rest)
+      if (prices) {
+        Object.assign(this.market.prices, { ...prices })
+      }
+    }
     this.metrics = createMetricsState()
+    // Seed initial metrics from scenario (for tutorials with pre-broken state)
+    if (scenario.startMetrics) {
+      Object.assign(this.metrics, scenario.startMetrics)
+    }
     this.eventsState = createEventsState()
 
     this.agents = createInitialAgents(
@@ -43,6 +57,9 @@ export class SimEngine {
     this.banks = createInitialBanks(3)
     assignAgentsToBanks(this.agents, this.banks)
 
+    // Crime log: persists across ticks, cleared by metrics update
+    this._crimeLog = []
+
     // Global economy
     this.globalEconomy = createGlobalEconomyState()
 
@@ -52,6 +69,7 @@ export class SimEngine {
       ...o, met: false, completed: false, sustainCount: 0, progress: 0, sustainProgress: 0
     }))
     this.initialMetrics = null  // captured after first metrics update
+
     this.scenarioComplete = false
     this.scenarioFailed = false
     this._zeroGdpStreak = 0  // consecutive metrics updates with GDP = 0
@@ -63,6 +81,8 @@ export class SimEngine {
     }
     // Story mode: only fire predefined events, no random shocks
     this.isStoryMode = !!scenario.isStory
+    // Tutorial mode: suppress random events (no shocks)
+    this.isTutorialMode = !!scenario.isTutorial
 
     this._pendingMessages = []
 
@@ -91,6 +111,30 @@ export class SimEngine {
 
     // Warm up the economy so it starts in a healthy state
     this._warmup()
+
+    // Tutorial warmup: run N ticks silently so the broken economy state develops
+    // (agents develop debt spirals, crime emerges from poverty, etc.)
+    if (scenario.warmupTicks > 0) {
+      for (let i = 0; i < scenario.warmupTicks; i++) {
+        this.step()
+      }
+      this.tick = 0 // reset visible clock so player starts at year 0
+      // Re-seed any override metrics/market after warmup
+      if (scenario.startMetrics) {
+        Object.assign(this.metrics, scenario.startMetrics)
+      }
+      if (scenario.startMarket) {
+        if (scenario.startMarket.prices) Object.assign(this.market.prices, { ...scenario.startMarket.prices })
+        if (scenario.startMarket.cpi !== undefined) this.market.cpi = scenario.startMarket.cpi
+        if (scenario.startMarket.avgExpectedInflation !== undefined) {
+          this.market.avgExpectedInflation = scenario.startMarket.avgExpectedInflation
+          // Also reset individual agent expectations to match
+          for (const a of this.agents) {
+            if (a.alive) a.inflationExpectation = scenario.startMarket.avgExpectedInflation
+          }
+        }
+      }
+    }
   }
 
   _warmup() {
@@ -211,11 +255,15 @@ export class SimEngine {
     this.policies = createPolicyState(scenario.policies || {})
     this.market = createMarketState()
     this.metrics = createMetricsState()
+    if (scenario.startMetrics) {
+      Object.assign(this.metrics, scenario.startMetrics)
+    }
     this.eventsState = createEventsState()
     this.agents = createInitialAgents(scenario.agentCount || INITIAL_AGENTS, scenario)
     this.businesses = createInitialBusinesses(scenario.businessCount || INITIAL_BUSINESSES, this.agents, scenario)
     this.banks = createInitialBanks(3)
     assignAgentsToBanks(this.agents, this.banks)
+    this._crimeLog = []
     this.globalEconomy = createGlobalEconomyState()
     this.objectives = SCENARIO_OBJECTIVES[scenario.id] || []
     this.objectiveProgress = this.objectives.map(o => ({
@@ -230,6 +278,7 @@ export class SimEngine {
       this.scheduledEvents = [...this.scheduledEvents, scenario.scheduledEvent]
     }
     this.isStoryMode = !!scenario.isStory
+    this.isTutorialMode = !!scenario.isTutorial
     this._firedInsights = null
     this._lastInsightTick = null
     this.policyLag = {}
@@ -250,6 +299,17 @@ export class SimEngine {
     // 1. Tick all agents
     for (const agent of this.agents) {
       if (agent.alive) agent.tick(state, this.policies)
+    }
+
+    // 1b. Deduct wealth tax from rich agents (per-tick fraction of annual rate)
+    const wealthTaxRate = this.policies.wealthTax || 0
+    if (wealthTaxRate > 0) {
+      const perTickRate = wealthTaxRate / 52  // annual rate spread over 52 ticks/year
+      for (const agent of this.agents) {
+        if (agent.alive && agent.wealth > RICH_THRESHOLD) {
+          agent.wealth -= (agent.wealth - RICH_THRESHOLD) * perTickRate
+        }
+      }
     }
 
     // 2. Tick all businesses
@@ -327,9 +387,11 @@ export class SimEngine {
     }
 
     // 6. Fire scheduled events at their designated tick
+    let scheduledEvent = null
     for (const se of this.scheduledEvents) {
       if (this.tick === se.atTick) {
-        tickEvents(this.eventsState, state, this.policies, this.tick, se.type)
+        const result = tickEvents(this.eventsState, state, this.policies, this.tick, se.type)
+        if (result) scheduledEvent = result
       }
     }
 
@@ -339,9 +401,10 @@ export class SimEngine {
       this._pendingForceShock = false
       forceType = '_random'
     }
-    const newEvent = forceType
+    const suppressRandom = this.isStoryMode || this.isTutorialMode
+    const newEvent = scheduledEvent || (forceType
       ? tickEvents(this.eventsState, state, this.policies, this.tick, forceType)
-      : (!this.isStoryMode ? tickEvents(this.eventsState, state, this.policies, this.tick) : null)
+      : (!suppressRandom ? tickEvents(this.eventsState, state, this.policies, this.tick) : null))
     if (newEvent) {
       // Handle immigration wave spawning
       if (newEvent._spawnAgents) {
@@ -380,15 +443,15 @@ export class SimEngine {
     // 11. Check insight triggers
     const insight = this._checkInsights()
 
-    // 12. Check failure conditions
+    // 12. Check failure conditions (skip in tutorial — player keeps trying)
     let scenarioFailed = null
-    if (!this.scenarioFailed && !this.scenarioComplete) {
+    if (!this.isTutorialMode && !this.scenarioFailed && !this.scenarioComplete) {
       scenarioFailed = this._checkFailure()
     }
 
-    // 13. Check scenario completion
+    // 13. Check scenario completion (skip in tutorial — completion is condition-based)
     let scenarioComplete = null
-    if (!this.scenarioComplete && !this.scenarioFailed && this.scenario.durationYears) {
+    if (!this.isTutorialMode && !this.scenarioComplete && !this.scenarioFailed && this.scenario.durationYears) {
       const year = Math.floor(this.tick / 52)
       if (year >= this.scenario.durationYears) {
         this.scenarioComplete = true
@@ -414,7 +477,8 @@ export class SimEngine {
       market: this.market,
       metrics: this.metrics,
       globalEconomy: this.globalEconomy,
-      prices: this.market.prices  // agents read prices via state.prices
+      prices: this.market.prices,  // agents read prices via state.prices
+      _crimeLog: this._crimeLog    // persistent crime log across ticks
     }
   }
 
@@ -1090,7 +1154,8 @@ export class SimEngine {
         name: this.eventsState.pendingChoiceEvent.name,
         description: this.eventsState.pendingChoiceEvent.description,
         icon: this.eventsState.pendingChoiceEvent.icon,
-        choices: this.eventsState.pendingChoiceEvent.definition.choices
+        choices: this.eventsState.pendingChoiceEvent.definition.choices,
+        hint: this.eventsState.pendingChoiceEvent.definition.hint
       } : null,
       objectives: this._buildObjectivesSnapshot(),
       scenarioDurationYears: this.scenario.durationYears || null,

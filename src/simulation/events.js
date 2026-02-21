@@ -25,6 +25,7 @@ const EVENT_DEFINITIONS = {
     description: 'A disease is spreading fast. How do you respond?',
     duration: 200,
     icon: '🦠',
+    hint: 'After choosing, consider raising Interest Rate to cool any inflation from stimulus spending, or boost Education Funding to rebuild productivity faster. If you chose lockdown, UBI can keep citizens afloat while businesses are shut.',
     effects: {
       healthMultiplier: 0.7,
       productionMultiplier: 0.6,
@@ -39,7 +40,10 @@ const EVENT_DEFINITIONS = {
         description: 'Shut down non-essential businesses. Mandate isolation.',
         tradeoff: 'Saves lives, fewer deaths. GDP falls sharply. Unemployment spikes short-term.',
         historicalNote: 'COVID lockdowns (2020) saved millions but triggered the sharpest recession since WWII.',
-        effectOverride: { healthMultiplier: 0.95, productionMultiplier: 0.4, deathRateMultiplier: 1.2, duration: 150 }
+        effectOverride: { healthMultiplier: 0.95, productionMultiplier: 0.4, deathRateMultiplier: 1.2, duration: 150 },
+        followUpEvents: [
+          { type: 'recession', delay: 80 }   // Lockdown → economic recession
+        ]
       },
       {
         id: 'herd_immunity',
@@ -67,6 +71,7 @@ const EVENT_DEFINITIONS = {
     description: 'Severe drought has decimated harvests. Food prices are spiking. The poor can\'t eat. What do you do?',
     duration: 150,
     icon: '🌾',
+    hint: 'Food prices hit the poor hardest. Consider raising UBI or Unemployment Benefits to keep people fed. If you chose price controls, watch for a Crime Wave from black markets. Farming Subsidies can help prevent the next crisis.',
     effects: {
       foodSupplyMultiplier: 0.3,
       foodPriceMultiplier: 2.5
@@ -90,7 +95,10 @@ const EVENT_DEFINITIONS = {
         tradeoff: 'Keeps food accessible short-term. Reduces farmer incentives — may worsen next harvest.',
         historicalNote: 'USSR price controls kept bread cheap but caused chronic shortages and black markets.',
         effectOverride: { foodSupplyMultiplier: 0.3, foodPriceMultiplier: 1.1, duration: 200 },
-        policyOverrides: { priceControlFood: true }
+        policyOverrides: { priceControlFood: true },
+        followUpEvents: [
+          { type: 'crimeWave', delay: 100 }  // Shortages → black markets → crime
+        ]
       },
       {
         id: 'import_food',
@@ -109,6 +117,7 @@ const EVENT_DEFINITIONS = {
     description: 'A new technology could double productivity — but automate 20% of jobs. How do you respond to this disruption?',
     duration: 300,
     icon: '🚀',
+    hint: 'Automation destroys jobs. Boost Education Funding to retrain workers, or enable UBI to support the displaced. If inequality spikes, a Wealth Tax on tech winners can redistribute gains. Raising Min Wage protects remaining workers from a race to the bottom.',
     effects: {
       techProductivityMultiplier: 2.0,
       techWorkerWageMultiplier: 1.5,
@@ -122,7 +131,10 @@ const EVENT_DEFINITIONS = {
         description: 'Let the market adopt technology at full speed. No restrictions.',
         tradeoff: 'Maximum GDP growth. Rapid job displacement. High inequality surge.',
         historicalNote: 'Industrial Revolution (1760s+): enormous long-term gains, but decades of worker misery before adaptation.',
-        effectOverride: { techProductivityMultiplier: 2.5, techWorkerWageMultiplier: 2.0, otherJobsAutomatedRate: 0.25, duration: 300 }
+        effectOverride: { techProductivityMultiplier: 2.5, techWorkerWageMultiplier: 2.0, otherJobsAutomatedRate: 0.25, duration: 300 },
+        followUpEvents: [
+          { type: 'generalStrike', delay: 200 }  // Mass displacement → worker revolt
+        ]
       },
       {
         id: 'managed_transition',
@@ -151,6 +163,7 @@ const EVENT_DEFINITIONS = {
     description: 'Asset prices are wildly inflated. A crash appears imminent. How do you respond?',
     duration: 250,
     icon: '💥',
+    hint: 'After the crash, raise the Reserve Requirement and Financial Oversight to prevent reckless lending from happening again. Lower Interest Rate to stimulate recovery. If unemployment spikes, UBI or Unemployment Benefits can soften the blow.',
     effects: {
       wealthInflationPhase: 1.5,
       wealthCrashPhase: 0.4
@@ -163,7 +176,10 @@ const EVENT_DEFINITIONS = {
         description: 'No intervention. Let markets correct naturally.',
         tradeoff: 'Short, sharp crash. High unemployment spike. Faster long-term recovery.',
         historicalNote: 'Hoover\'s approach in 1929 — worsened the Depression when banks also failed.',
-        effectOverride: { wealthCrashPhase: 0.25, duration: 150 }
+        effectOverride: { wealthCrashPhase: 0.25, duration: 150 },
+        followUpEvents: [
+          { type: 'bankRun', delay: 80 }    // Uncontrolled crash → banks fail
+        ]
       },
       {
         id: 'bailout',
@@ -173,7 +189,10 @@ const EVENT_DEFINITIONS = {
         tradeoff: 'Softer crash, but adds massive debt and rewards recklessness. Slow recovery.',
         historicalNote: 'TARP (2008) — prevented depression but caused lasting public anger.',
         effectOverride: { wealthCrashPhase: 0.60, duration: 350 },
-        govDebtPenalty: 2000
+        govDebtPenalty: 2000,
+        followUpEvents: [
+          { type: 'voteOfNoConfidence', delay: 200 }  // Public anger at bailouts
+        ]
       },
       {
         id: 'regulate',
@@ -212,6 +231,7 @@ const EVENT_DEFINITIONS = {
     description: 'The economy is contracting. Businesses are cutting, unemployment is rising. What\'s your response?',
     duration: 200,
     icon: '📉',
+    hint: 'Lower the Interest Rate to make borrowing cheaper and stimulate growth. Increase UBI or Unemployment Benefits to support laid-off workers. If government debt is already high, raise Income Tax or Corporate Tax to fund the recovery without printing money.',
     effects: {
       demandMultiplier: 0.6,
       businessCapitalDrain: 0.02,
@@ -226,7 +246,10 @@ const EVENT_DEFINITIONS = {
         tradeoff: 'Kickstarts demand. Adds to government debt. May cause mild inflation.',
         historicalNote: 'FDR\'s New Deal (1933), Obama\'s ARRA (2009), Biden\'s ARP (2021) — all used stimulus to end recessions.',
         effectOverride: { demandMultiplier: 0.85, businessCapitalDrain: 0.01, hiringSuppression: false, duration: 130 },
-        govDebtPenalty: 1500
+        govDebtPenalty: 1500,
+        followUpEvents: [
+          { type: 'boom', delay: 150 }  // Stimulus → recovery boom
+        ]
       },
       {
         id: 'austerity',
@@ -236,7 +259,10 @@ const EVENT_DEFINITIONS = {
         tradeoff: 'Improves budget balance. Deepens recession short-term. May extend recovery by years.',
         historicalNote: 'UK and EU austerity (2010-2015) extended the recession and caused a lost generation of unemployment.',
         effectOverride: { demandMultiplier: 0.45, businessCapitalDrain: 0.04, hiringSuppression: true, duration: 280 },
-        policyOverrides: { unemploymentBenefit: 0, educationFunding: 0.1 }
+        policyOverrides: { unemploymentBenefit: 0, educationFunding: 0.1 },
+        followUpEvents: [
+          { type: 'generalStrike', delay: 120 }  // Austerity → worker revolt
+        ]
       },
       {
         id: 'rate_cut',
@@ -267,6 +293,7 @@ const EVENT_DEFINITIONS = {
     description: 'Prices are doubling every few weeks. Currency is losing value faster than anyone can spend it. People are using wheelbarrows of cash to buy bread. What do you do?',
     duration: 300,
     icon: '💸',
+    hint: 'Stop the bleeding: set Print Money to 0 immediately and raise the Interest Rate sharply (15%+). This will cause a recession but stop the spiral. After prices stabilize, slowly lower rates again. Enable Foreign Reserve Intervention if available to defend the currency.',
     effects: {
       priceMultiplierPerTick: 1.008,
       wageErosionRate: 0.005,
@@ -291,7 +318,10 @@ const EVENT_DEFINITIONS = {
         tradeoff: 'Kills inflation but triggers mass unemployment and recession. Volcker shock medicine.',
         historicalNote: 'Paul Volcker (1980-82) raised US rates to 20% to kill stagflation. Inflation died. So did 2 years of growth.',
         effectOverride: { priceMultiplierPerTick: 1.001, wageErosionRate: 0.002, savingsDestructionRate: 0.003, duration: 150 },
-        policyOverrides: { interestRate: 0.20, printMoney: 0 }
+        policyOverrides: { interestRate: 0.20, printMoney: 0 },
+        followUpEvents: [
+          { type: 'recession', delay: 60 }  // Rate shock → recession (Volcker recession)
+        ]
       },
       {
         id: 'price_freeze',
@@ -301,7 +331,10 @@ const EVENT_DEFINITIONS = {
         tradeoff: 'Appears to stop inflation on paper. Creates chronic shortages and black markets.',
         historicalNote: 'Nixon\'s 1971 price controls temporarily stopped inflation — then it came back worse. Venezuela\'s price controls in 2010s caused empty supermarkets.',
         effectOverride: { priceMultiplierPerTick: 1.0, wageErosionRate: 0.003, savingsDestructionRate: 0.008, duration: 400 },
-        policyOverrides: { priceControlFood: true, priceControlHousing: true }
+        policyOverrides: { priceControlFood: true, priceControlHousing: true },
+        followUpEvents: [
+          { type: 'crimeWave', delay: 150 }  // Shortages → black markets → crime
+        ]
       }
     ]
   },
@@ -311,6 +344,7 @@ const EVENT_DEFINITIONS = {
     description: 'Workers across every sector have walked off the job. Production has stopped. Shelves are emptying. The labor movement is demanding radical change. How do you respond?',
     duration: 180,
     icon: '✊',
+    hint: 'Workers are angry about low pay and inequality. Raise the Min Wage and enable UBI to address root grievances. If you negotiate, the economy recovers fast but costs rise. Long-term, boost Education Funding so workers have better opportunities.',
     effects: {
       productionMultiplier: 0.1,
       businessCapitalDrain: 0.03,
@@ -334,7 +368,10 @@ const EVENT_DEFINITIONS = {
         description: 'Declare the strike illegal. Deploy security forces to reopen businesses. Arrest strike leaders.',
         tradeoff: 'Strike ends by force. Short-term production resumes. Generates massive unrest. Long-term labor relations destroyed.',
         historicalNote: 'Tsar Nicholas II cracked down on 1905 strikes. Workers returned, resentment grew, revolution followed 12 years later.',
-        effectOverride: { productionMultiplier: 0.7, businessCapitalDrain: 0.01, unrestLevel: 0.95, duration: 100 }
+        effectOverride: { productionMultiplier: 0.7, businessCapitalDrain: 0.01, unrestLevel: 0.95, duration: 100 },
+        followUpEvents: [
+          { type: 'revolution', delay: 200 }  // Suppression breeds revolution
+        ]
       },
       {
         id: 'meet_demands',
@@ -354,6 +391,7 @@ const EVENT_DEFINITIONS = {
     description: 'Citizens are lining up to withdraw everything from the banks. The financial system has 48 hours before it collapses completely. Businesses cannot make payroll. What do you do?',
     duration: 200,
     icon: '🏦',
+    hint: 'Immediately raise the Reserve Requirement to stop reckless lending. Enable Deposit Insurance to restore confidence. Increase Financial Oversight to prevent future crises. After the run subsides, lower Interest Rate to help businesses recover.',
     effects: {
       wealthDestructionRate: 0.04,
       businessCapitalCrash: 0.5,
@@ -387,7 +425,11 @@ const EVENT_DEFINITIONS = {
         description: 'No bailouts. Insolvent banks deserve to collapse. Creative destruction will rebuild stronger institutions.',
         tradeoff: 'Short-term economic catastrophe. Possibly long-term healthy reset. Historically devastating.',
         historicalNote: 'Hoover let 4,000 US banks fail 1930-33. GDP fell 30%. Unemployment hit 25%. "Creative destruction" was not creative.',
-        effectOverride: { wealthDestructionRate: 0.06, businessCapitalCrash: 0.15, hiringSuppression: true, duration: 350 }
+        effectOverride: { wealthDestructionRate: 0.06, businessCapitalCrash: 0.15, hiringSuppression: true, duration: 350 },
+        followUpEvents: [
+          { type: 'recession', delay: 50 },    // Bank collapse → deep recession
+          { type: 'crimeWave', delay: 150 }    // Poverty → crime
+        ]
       }
     ]
   },
@@ -397,6 +439,7 @@ const EVENT_DEFINITIONS = {
     description: 'THE PEOPLE HAVE HAD ENOUGH. Years of extreme inequality, poverty, and suffering have exploded into open revolt. The guillotine is being assembled in the town square. The wealthy are fleeing. The mob controls the streets. What do you do — if you even still have the power to do anything?',
     duration: 400,
     icon: '⚔️',
+    hint: 'This is an endgame event. To prevent future revolutions: reduce inequality with Wealth Tax and UBI, raise Min Wage, and fund Education. If you concede, rebuild with high Income Tax and social spending. The economy needs complete restructuring after this.',
     effects: {
       unrestLevel: 1.0,
       productionMultiplier: 0.2,
@@ -413,7 +456,10 @@ const EVENT_DEFINITIONS = {
         tradeoff: 'Unrest collapses. Radical equality — Gini drops to near zero. But all businesses are seized and production falls as the new system is built from scratch.',
         historicalNote: 'France 1789: The Third Estate won. Feudalism ended overnight. But the following decade brought the Reign of Terror, economic chaos, and Napoleon.',
         effectOverride: { unrestLevel: 0.05, productionMultiplier: 0.4, wealthSeizureRate: 0.0, executionProbability: 0, businessCapitalDrain: 0.01, duration: 300 },
-        policyOverrides: { incomeTax: 0.8, wealthConfiscation: 0.5, minWage: 20, ubi: 300 }
+        policyOverrides: { incomeTax: 0.8, wealthConfiscation: 0.5, minWage: 20, ubi: 300 },
+        followUpEvents: [
+          { type: 'brainDrain', delay: 80 }   // Revolution → elites flee
+        ]
       },
       {
         id: 'flee',
@@ -441,6 +487,7 @@ const EVENT_DEFINITIONS = {
     description: 'Your most skilled workers are leaving. High taxes, low opportunity, political instability — whatever the reason, talent is exiting fast. Businesses are struggling to fill key roles.',
     duration: 250,
     icon: '🧠',
+    hint: 'Talent leaves when taxes are too high and opportunities are low. Lower the Wealth Tax and Income Tax to reduce the push factor. Boost Education Funding to grow new talent domestically. If you open borders, new skilled immigrants can replace those who left.',
     effects: {
       skillErosionRate: 0.002,
       highSkillExitProbability: 0.01,
@@ -474,7 +521,10 @@ const EVENT_DEFINITIONS = {
         description: 'Good riddance to elites. The working class will step up. Skills can be rebuilt from within.',
         tradeoff: 'No cost. Significant long-term productivity collapse as expertise exits permanently.',
         historicalNote: 'Zimbabwe\'s post-2000 land reform drove out skilled farmers and professionals. GDP fell 50%. 3 million skilled workers fled.',
-        effectOverride: { skillErosionRate: 0.004, highSkillExitProbability: 0.02, productivityDecay: 0.993, duration: 400 }
+        effectOverride: { skillErosionRate: 0.004, highSkillExitProbability: 0.02, productivityDecay: 0.993, duration: 400 },
+        followUpEvents: [
+          { type: 'recession', delay: 100 }  // Talent loss → economic decline
+        ]
       }
     ]
   },
@@ -484,6 +534,7 @@ const EVENT_DEFINITIONS = {
     description: 'Poverty and desperation have triggered a surge in crime. Theft, robbery, and assault are skyrocketing. Businesses are closing early. Citizens are afraid. How do you respond?',
     duration: 250,
     icon: '🚨',
+    hint: 'Crime stems from poverty and desperation. Raise Police Funding for a quick fix, but also address root causes: increase UBI, raise Min Wage, and boost Education Funding. Long-term, reducing inequality with Wealth Tax prevents the next crime wave.',
     effects: {
       crimeMultiplier: 2.0,
       businessCapitalDrain: 0.01,
@@ -530,6 +581,7 @@ const EVENT_DEFINITIONS = {
     description: 'Your approval rating has collapsed below 20%. The legislature is calling for your removal. The streets are restless. Your mandate is gone. How do you respond?',
     duration: 100,
     icon: '🗳️',
+    hint: 'Your approval crashed because people are suffering. Quick wins: raise UBI, lower Income Tax, or enable Public Healthcare to win back popular support. Longer term, reduce inequality and unemployment. If you resign, the next government starts fresh at 40% approval.',
     effects: {
       unrestLevel: 0.6,
       productionMultiplier: 0.85
@@ -562,7 +614,11 @@ const EVENT_DEFINITIONS = {
         description: 'Reject the vote. Declare emergency powers. Suppress dissent. The economy be damned — you\'re not leaving.',
         tradeoff: 'Unrest spikes massively. Production collapses. May cascade into revolution.',
         historicalNote: 'Maduro rejected his no-confidence vote in 2017. Venezuela\'s economy collapsed 65%. 7 million fled the country.',
-        effectOverride: { unrestLevel: 0.95, productionMultiplier: 0.5, duration: 300 }
+        effectOverride: { unrestLevel: 0.95, productionMultiplier: 0.5, duration: 300 },
+        followUpEvents: [
+          { type: 'revolution', delay: 150 },   // Clinging to power → revolution
+          { type: 'brainDrain', delay: 80 }      // Instability → talent flees
+        ]
       }
     ]
   }
@@ -572,7 +628,8 @@ export function createEventsState() {
   return {
     activeEvents: [],
     eventHistory: [],
-    lastEventTick: 0
+    lastEventTick: 0,
+    scheduledFollowUps: []   // consequence events triggered by player choices
   }
 }
 
@@ -583,6 +640,14 @@ export function tickEvents(eventsState, state, policies, tick, forceType = null)
     if (e.definition.duration === 0) return true // permanent
     return (tick - e.startTick) < e.definition.duration
   })
+
+  // Fire any follow-up events that are due
+  const dueFollowUps = eventsState.scheduledFollowUps.filter(f => f.atTick <= tick)
+  eventsState.scheduledFollowUps = eventsState.scheduledFollowUps.filter(f => f.atTick > tick)
+  for (const followUp of dueFollowUps) {
+    const fEvent = _triggerEvent(eventsState, state, policies, tick, followUp.type)
+    if (fEvent?.requiresChoice) return fEvent
+  }
 
   let newEvent = null
 
@@ -634,6 +699,16 @@ export function resolveEventChoice(eventsState, eventId, choiceId, state) {
 
   event.choiceMade = choiceId
   event.requiresChoice = false
+
+  // Schedule follow-up consequence events triggered by this choice
+  if (choice.followUpEvents) {
+    for (const followUp of choice.followUpEvents) {
+      eventsState.scheduledFollowUps.push({
+        type: followUp.type,
+        atTick: event.startTick + (followUp.delay || 100)
+      })
+    }
+  }
 
   // Now apply immediate effects
   _applyImmediateEffects(event, state)

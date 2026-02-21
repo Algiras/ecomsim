@@ -11,6 +11,7 @@ import VitalSigns from './components/VitalSigns.jsx'
 import StoryIntro from './components/StoryIntro.jsx'
 import StoryOutro from './components/StoryOutro.jsx'
 import VoiceOrb from './components/VoiceOrb.jsx'
+import SharePanel from './components/SharePanel.jsx'
 import { validatePolicy } from './simulation/policy.js'
 import { loadScenario, saveScenario, loadStoryProgress, saveStoryProgress, resetStoryProgress } from './utils/storage.js'
 import { useNarrator } from './hooks/useNarrator.js'
@@ -90,6 +91,9 @@ export default function App() {
   const [storyIntro, setStoryIntro] = useState(null)
   const [storyOutro, setStoryOutro] = useState(null)
 
+  // Game mode: 'freeplay' | 'tutorial' | 'story' | 'historical'
+  const [gameMode, setGameMode] = useState('freeplay')
+
   // Tutorial state
   const [tutorialLessonIndex, setTutorialLessonIndex] = useState(-1) // -1 = inactive
   const [tutorialComplete, setTutorialComplete] = useState(false)
@@ -100,6 +104,7 @@ export default function App() {
 
   // Achievement + unlock toasts
   const [achievementToasts, setAchievementToasts] = useState([])
+  const [toastShareOpen, setToastShareOpen] = useState(null) // id of toast with share panel open
 
   // Auto-dismiss toasts after 5 seconds
   useEffect(() => {
@@ -342,14 +347,27 @@ export default function App() {
     setTutorialLessonIndex(nextIdx)
     setTutorialComplete(false)
     const lesson = TUTORIAL_LESSONS[nextIdx]
+    const isLastLesson = nextIdx === TUTORIAL_LESSONS.length - 1
     const config = {
       id: 'default',
       name: lesson.title,
+      isTutorial: !isLastLesson,
       ...lesson.scenarioConfig
     }
     activeModelRef.current = config
     _resetSim('default', config)
   }, [tutorialLessonIndex, _resetSim])
+
+  // Auto-advance to next lesson after a brief delay when tutorial step is completed
+  const handleTutorialNextRef = useRef(null)
+  handleTutorialNextRef.current = handleTutorialNext
+  useEffect(() => {
+    if (!tutorialComplete || tutorialLessonIndex < 0) return
+    const timer = setTimeout(() => {
+      handleTutorialNextRef.current?.()
+    }, 2500)
+    return () => clearTimeout(timer)
+  }, [tutorialComplete, tutorialLessonIndex])
 
   const handleTutorialSkip = useCallback(() => {
     setTutorialLessonIndex(-1)
@@ -363,15 +381,18 @@ export default function App() {
 
   const handleModeSelect = useCallback((id) => {
     if (id === '_tutorial') {
+      setGameMode('tutorial')
       const startIdx = completedLessons.length < TUTORIAL_LESSONS.length
         ? TUTORIAL_LESSONS.findIndex((_, i) => !completedLessons.includes(i))
         : 0
       setTutorialLessonIndex(startIdx)
       setTutorialComplete(false)
       const lesson = TUTORIAL_LESSONS[startIdx]
+      const isLastLesson = startIdx === TUTORIAL_LESSONS.length - 1
       const config = {
         id: 'default',
         name: lesson.title,
+        isTutorial: !isLastLesson,
         ...lesson.scenarioConfig
       }
       activeModelRef.current = config
@@ -390,6 +411,7 @@ export default function App() {
     }
 
     if (id.startsWith('_model:')) {
+      setGameMode('freeplay')
       const modelId = id.slice(7)
       const model = ECONOMIC_MODELS.find(m => m.id === modelId)
       if (model) {
@@ -415,6 +437,15 @@ export default function App() {
 
     const scenario = SCENARIOS[id]
     const chapter = scenario?.isStory ? STORY_CHAPTERS.find(c => c.id === id) : null
+
+    // Determine game mode from scenario type
+    if (scenario?.isStory) {
+      setGameMode('story')
+    } else if (scenario?.isHistorical) {
+      setGameMode('historical')
+    } else {
+      setGameMode('freeplay')
+    }
 
     setScenarioId(id)
     saveScenario(id)
@@ -482,6 +513,7 @@ export default function App() {
   return (
     <div className="h-screen flex flex-col bg-[#0a0a0f] text-[#e2e8f0] overflow-hidden font-mono">
       <Header
+        gameMode={gameMode}
         paused={paused}
         speed={speed}
         onPause={handlePause}
@@ -509,14 +541,17 @@ export default function App() {
         unlockedSections={unlockedSections}
         metrics={simState?.metrics}
         approvalRating={simState?.approvalRating ?? 50}
+        tutorialLesson={tutorialLessonIndex >= 0 ? TUTORIAL_LESSONS[tutorialLessonIndex] : null}
       />
 
-      {/* Vital Signs strip */}
-      <VitalSigns
-        metrics={simState?.metrics}
-        approvalRating={simState?.approvalRating ?? 50}
-        onTabSwitch={handleSectionChange}
-      />
+      {/* Vital Signs strip — hidden in tutorial mode */}
+      {gameMode !== 'tutorial' && (
+        <VitalSigns
+          metrics={simState?.metrics}
+          approvalRating={simState?.approvalRating ?? 50}
+          onTabSwitch={handleSectionChange}
+        />
+      )}
 
       {/* Story chapter banner */}
       {isStoryMode && currentChapter && !storyIntro && !storyOutro && (
@@ -535,6 +570,7 @@ export default function App() {
         {/* Left column: Metrics + Policies */}
         <div className="w-[440px] flex-shrink-0 border-r border-[#1e1e2e] bg-[#0a0a0f] overflow-hidden">
           <Dashboard
+            gameMode={gameMode}
             metrics={simState?.metrics}
             market={simState?.market}
             activeEvents={simState?.activeEvents}
@@ -600,6 +636,15 @@ export default function App() {
                   <div className="text-sm font-bold text-white">{a.name}</div>
                   <div className="text-[10px] text-[#94a3b8]">{a.description}</div>
                 </div>
+                {!a.isUnlock && (
+                  <button
+                    onClick={() => setToastShareOpen(prev => prev === a.id ? null : a.id)}
+                    className="text-[#64748b] hover:text-[#f59e0b] text-[10px] font-mono px-1 self-start"
+                    title="Share achievement"
+                  >
+                    📤
+                  </button>
+                )}
                 <button
                   onClick={() => setAchievementToasts(t => t.filter(x => x.id !== a.id))}
                   className="text-[#64748b] hover:text-white text-sm px-1 self-start"
@@ -607,6 +652,14 @@ export default function App() {
                   ✕
                 </button>
               </div>
+              {toastShareOpen === a.id && (
+                <div className="mt-2 pt-2 border-t border-[#1e1e2e]">
+                  <SharePanel
+                    text={`I unlocked "${a.name}" in EconSim! ${a.icon}`}
+                    compact
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -623,7 +676,7 @@ export default function App() {
       )}
 
       {/* Generic report card (non-story) */}
-      {reportCard && !isStoryMode && (
+      {reportCard && !isStoryMode && !currentScenario?.isHistorical && (
         <ReportCard report={reportCard} onRetry={handleRetry} onNextScenario={handleNextScenario} />
       )}
 

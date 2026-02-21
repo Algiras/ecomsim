@@ -37,7 +37,8 @@ function loop(timestamp) {
       if (result.event) event = result.event
       if (result.insight) insight = result.insight
       if (result.scenarioComplete) scenarioComplete = result.scenarioComplete
-      // Don't break on choice events — sim keeps running, creating urgency
+      // Pause on choice events so player can decide without time pressure
+      if (event?.requiresChoice) break
     }
 
     // Send state snapshot
@@ -46,8 +47,8 @@ function loop(timestamp) {
 
     if (event) {
       self.postMessage({ type: 'EVENT', event })
-      // If event requires player choice, notify main thread (sim keeps running)
       if (event.requiresChoice) {
+        running = false
         self.postMessage({ type: 'CHOICE_REQUIRED', event: snapshot.pendingChoice })
       }
     }
