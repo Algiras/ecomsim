@@ -6,7 +6,7 @@ export function runLaborMarket(state, policies) {
   const { agents, businesses } = state
 
   const unemployed = agents.filter(a =>
-    a.alive && a.state === 'unemployed' && a.age > 18 * 52
+    a.alive && a.state === 'unemployed' && a.age > 18 * 52 && !a.incarcerated
   )
 
   const hiringBiz = businesses.filter(b =>
@@ -27,7 +27,8 @@ export function runLaborMarket(state, policies) {
       const dx = agent.x - biz.x
       const dy = agent.y - biz.y
       const dist = Math.sqrt(dx * dx + dy * dy)
-      const score = agent.skill * 0.7 + agent.education * 0.3 - dist * 0.001
+      const crimePenalty = (agent.criminalRecord?.length || 0) > 2 ? 0.5 : (agent.criminalRecord?.length || 0) * 0.1
+      const score = agent.skill * 0.7 + agent.education * 0.3 - dist * 0.001 - crimePenalty
       if (score > bestScore) {
         bestScore = score
         bestIdx = i
@@ -35,7 +36,7 @@ export function runLaborMarket(state, policies) {
     }
 
     const candidate = unemployed[bestIdx]
-    const wage = negotiateWage(biz, candidate, policies)
+    const wage = negotiateWage(biz, candidate, policies, state)
 
     // Hire if they can afford it
     if (biz.capital > wage * 5) {
@@ -47,7 +48,7 @@ export function runLaborMarket(state, policies) {
   }
 }
 
-export function negotiateWage(business, agent, policies) {
+export function negotiateWage(business, agent, policies, state) {
   const minWage = policies.minWage || 0
   const baseWage = business.wageOffered
 
@@ -55,7 +56,13 @@ export function negotiateWage(business, agent, policies) {
   const skillPremium = agent.skill * 10 + agent.education * 5
 
   // Negotiation power shifts wage
-  const negotiated = baseWage * (1 - WAGE_NEGOTIATION_POWER) + skillPremium * WAGE_NEGOTIATION_POWER
+  let negotiated = baseWage * (1 - WAGE_NEGOTIATION_POWER) + skillPremium * WAGE_NEGOTIATION_POWER
+
+  // Phillips Curve: tight labor market → wage pressure
+  const unemploymentRate = state?.metrics?.unemployment ?? 0.1
+  const tightness = 1 - unemploymentRate
+  const tightnessBonus = Math.pow(tightness, 3) * 0.3
+  negotiated *= (1 + tightnessBonus)
 
   return Math.max(negotiated, minWage)
 }

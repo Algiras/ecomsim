@@ -10,8 +10,12 @@ export default function Canvas({ simState, onAgentClick, selectedAgentId }) {
   const tickRef = useRef(0)
   const prevAgentIdsRef = useRef(new Set())
   const dprRef = useRef(1)
+  const simStateRef = useRef(null)
+  const selectedAgentIdRef = useRef(null)
 
-  // Resize canvas to fill its container at device pixel ratio — eliminates pixelation
+  simStateRef.current = simState
+  selectedAgentIdRef.current = selectedAgentId
+
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -31,122 +35,97 @@ export default function Canvas({ simState, onAgentClick, selectedAgentId }) {
     return () => ro.disconnect()
   }, [])
 
-  const render = useCallback(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
+  useEffect(() => {
+    const render = () => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')
+      const state = simStateRef.current
+      const selId = selectedAgentIdRef.current
 
-    tickRef.current++
-    const tick = tickRef.current
+      tickRef.current++
+      const tick = tickRef.current
 
-    const dpr = dprRef.current
-    const w = canvas.width
-    const h = canvas.height
+      const w = canvas.width
+      const h = canvas.height
 
-    // Scale context so simulation coordinates (0..CANVAS_WIDTH, 0..CANVAS_HEIGHT)
-    // map cleanly onto the physical pixel buffer at any DPR or window size
-    ctx.setTransform(1, 0, 0, 1, 0, 0)
-    const scaleX = w / CANVAS_WIDTH
-    const scaleY = h / CANVAS_HEIGHT
-    const scale = Math.min(scaleX, scaleY)
-    const offsetX = (w - CANVAS_WIDTH * scale) / 2
-    const offsetY = (h - CANVAS_HEIGHT * scale) / 2
-    ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY)
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      const scaleX = w / CANVAS_WIDTH
+      const scaleY = h / CANVAS_HEIGHT
+      ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0)
 
-    // Clear with dark background (in logical coords)
-    ctx.fillStyle = '#0a0a0f'
-    ctx.fillRect(-offsetX / scale, -offsetY / scale, w / scale, h / scale)
+      ctx.fillStyle = '#0a0a0f'
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
 
-    if (!simState) {
-      // Loading state
-      ctx.fillStyle = '#334155'
-      ctx.font = '14px monospace'
-      ctx.textAlign = 'center'
-      ctx.fillText('Initializing simulation...', canvas.width / 2, canvas.height / 2)
-      return
-    }
+      if (!state) {
+        ctx.fillStyle = '#334155'
+        ctx.font = '14px monospace'
+        ctx.textAlign = 'center'
+        ctx.fillText('Initializing simulation...', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2)
+        rafRef.current = requestAnimationFrame(render)
+        return
+      }
 
-    const { agents = [], businesses = [] } = simState
+      const { agents = [], businesses = [] } = state
 
-    // Track births/deaths for effects
-    const currentIds = new Set(agents.filter(a => a.alive).map(a => a.id))
-    const prevIds = prevAgentIdsRef.current
+      const currentIds = new Set(agents.filter(a => a.alive).map(a => a.id))
+      const prevIds = prevAgentIdsRef.current
 
-    // Revolution overlay
-    const isRevolution = simState?.activeEvents?.some(e => e.type === 'revolution')
-    setRevolutionActive(!!isRevolution)
+      const isRevolution = state?.activeEvents?.some(e => e.type === 'revolution')
+      setRevolutionActive(!!isRevolution)
 
-    // Deaths
-    for (const id of prevIds) {
-      if (!currentIds.has(id)) {
-        const dead = agents.find(a => a.id === id)
-        if (dead) {
-          if (isRevolution) {
-            addRevolutionEffect(dead.x, dead.y)
-          } else {
-            addDeathEffect(dead.x, dead.y)
+      for (const id of prevIds) {
+        if (!currentIds.has(id)) {
+          const dead = agents.find(a => a.id === id)
+          if (dead) {
+            if (isRevolution) addRevolutionEffect(dead.x, dead.y)
+            else addDeathEffect(dead.x, dead.y)
           }
         }
       }
-    }
 
-    // Births (new IDs we haven't seen)
-    for (const id of currentIds) {
-      if (!prevIds.has(id)) {
-        const newAgent = agents.find(a => a.id === id)
-        if (newAgent) addBirthEffect(newAgent.x, newAgent.y)
+      for (const id of currentIds) {
+        if (!prevIds.has(id)) {
+          const newAgent = agents.find(a => a.id === id)
+          if (newAgent) addBirthEffect(newAgent.x, newAgent.y)
+        }
       }
+      prevAgentIdsRef.current = currentIds
+
+      renderBusinessZones(ctx, businesses)
+      renderEmploymentLines(ctx, agents, businesses)
+      renderBusinesses(ctx, businesses, tick)
+      renderAgents(ctx, agents, selId, tick)
+      renderEffects(ctx)
+      renderRevolutionOverlay(ctx, w, h)
+
+      rafRef.current = requestAnimationFrame(render)
     }
-    prevAgentIdsRef.current = currentIds
 
-    // Layer 1: Business zones (soft background glow)
-    renderBusinessZones(ctx, businesses, canvas.width, canvas.height)
-
-    // Layer 2: Employment connection lines
-    renderEmploymentLines(ctx, agents, businesses)
-
-    // Layer 3: Businesses
-    renderBusinesses(ctx, businesses, tick)
-
-    // Layer 4: Agents
-    renderAgents(ctx, agents, selectedAgentId, tick)
-
-    // Layer 5: Particle effects
-    renderEffects(ctx)
-
-    // Layer 6: Revolution red overlay (drawn in screen space, bypasses transform)
-    renderRevolutionOverlay(ctx, w, h)
-
-    rafRef.current = requestAnimationFrame(render)
-  }, [simState, selectedAgentId])
-
-  useEffect(() => {
     rafRef.current = requestAnimationFrame(render)
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
-  }, [render])
+  }, [])
 
   const handleClick = useCallback((e) => {
-    if (!simState?.agents || !onAgentClick) return
+    const state = simStateRef.current
+    if (!state?.agents || !onAgentClick) return
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
-    // Map CSS pixels → simulation logical coordinates
     const dpr = dprRef.current
     const w = canvas.width
     const h = canvas.height
-    const scale = Math.min(w / CANVAS_WIDTH, h / CANVAS_HEIGHT)
-    const offsetX = (w - CANVAS_WIDTH * scale) / 2
-    const offsetY = (h - CANVAS_HEIGHT * scale) / 2
+    const scaleX = w / CANVAS_WIDTH
+    const scaleY = h / CANVAS_HEIGHT
     const cssX = e.clientX - rect.left
     const cssY = e.clientY - rect.top
-    const mx = (cssX * dpr - offsetX) / scale
-    const my = (cssY * dpr - offsetY) / scale
+    const mx = (cssX * dpr) / scaleX
+    const my = (cssY * dpr) / scaleY
 
-    // Find closest agent within 12px
     let closest = null
     let closestDist = 12
-    for (const agent of simState.agents) {
+    for (const agent of state.agents) {
       if (!agent.alive) continue
       const d = Math.sqrt((agent.x - mx) ** 2 + (agent.y - my) ** 2)
       if (d < closestDist) {
@@ -155,12 +134,12 @@ export default function Canvas({ simState, onAgentClick, selectedAgentId }) {
       }
     }
     onAgentClick(closest)
-  }, [simState, onAgentClick])
+  }, [onAgentClick])
 
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 w-full h-full cursor-crosshair"
+      className="w-full h-full cursor-crosshair"
       style={{ display: 'block' }}
       onClick={handleClick}
     />

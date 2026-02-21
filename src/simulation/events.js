@@ -13,7 +13,10 @@ export const EVENT_TYPES = {
   HYPERINFLATION: 'hyperinflation',
   GENERAL_STRIKE: 'generalStrike',
   BANK_RUN: 'bankRun',
-  BRAIN_DRAIN: 'brainDrain'
+  BRAIN_DRAIN: 'brainDrain',
+  REVOLUTION: 'revolution',
+  CRIME_WAVE: 'crimeWave',
+  VOTE_OF_NO_CONFIDENCE: 'voteOfNoConfidence'
 }
 
 const EVENT_DEFINITIONS = {
@@ -389,6 +392,50 @@ const EVENT_DEFINITIONS = {
     ]
   },
 
+  [EVENT_TYPES.REVOLUTION]: {
+    name: '🗡️ Revolution!',
+    description: 'THE PEOPLE HAVE HAD ENOUGH. Years of extreme inequality, poverty, and suffering have exploded into open revolt. The guillotine is being assembled in the town square. The wealthy are fleeing. The mob controls the streets. What do you do — if you even still have the power to do anything?',
+    duration: 400,
+    icon: '⚔️',
+    effects: {
+      unrestLevel: 1.0,
+      productionMultiplier: 0.2,
+      wealthSeizureRate: 0.05,
+      executionProbability: 0.002,
+      businessCapitalDrain: 0.04
+    },
+    choices: [
+      {
+        id: 'concede_everything',
+        label: 'Concede Everything',
+        emoji: '🏳️',
+        description: 'Accept the revolution. Abolish class privileges. Redistribute all wealth. Let the people\'s government take over.',
+        tradeoff: 'Unrest collapses. Radical equality — Gini drops to near zero. But all businesses are seized and production falls as the new system is built from scratch.',
+        historicalNote: 'France 1789: The Third Estate won. Feudalism ended overnight. But the following decade brought the Reign of Terror, economic chaos, and Napoleon.',
+        effectOverride: { unrestLevel: 0.05, productionMultiplier: 0.4, wealthSeizureRate: 0.0, executionProbability: 0, businessCapitalDrain: 0.01, duration: 300 },
+        policyOverrides: { incomeTax: 0.8, wealthConfiscation: 0.5, minWage: 20, ubi: 300 }
+      },
+      {
+        id: 'flee',
+        label: 'The Aristocracy Flees',
+        emoji: '🏃',
+        description: 'The ruling class escapes with whatever they can carry. Power vacuum. Nobody is in charge. The economy is left to reorganize itself.',
+        tradeoff: 'Mass wealth emigration. Short burst of looting. Long period of rebuilding with more equal starting conditions.',
+        historicalNote: 'Russian aristocracy fled 1917. Cuban bourgeoisie fled to Miami 1959. Both created power vacuums that new authoritarian regimes filled.',
+        effectOverride: { unrestLevel: 0.3, productionMultiplier: 0.35, wealthSeizureRate: 0.0, executionProbability: 0.001, businessCapitalDrain: 0.02, duration: 250 }
+      },
+      {
+        id: 'violent_suppression',
+        label: 'Violent Suppression',
+        emoji: '💀',
+        description: 'Deploy the army. Shoot the protesters. Behead the ringleaders. Restore "order" through maximum force.',
+        tradeoff: 'Short-term order restored. Underlying conditions unchanged. Revolution deferred, not defeated — it will return, worse.',
+        historicalNote: 'Tsar Nicholas II suppressed the 1905 revolution. 12 years later, the Romanovs were all executed in a basement.',
+        effectOverride: { unrestLevel: 0.85, productionMultiplier: 0.5, wealthSeizureRate: 0.01, executionProbability: 0.005, businessCapitalDrain: 0.03, duration: 500 }
+      }
+    ]
+  },
+
   [EVENT_TYPES.BRAIN_DRAIN]: {
     name: 'Brain Drain',
     description: 'Your most skilled workers are leaving. High taxes, low opportunity, political instability — whatever the reason, talent is exiting fast. Businesses are struggling to fill key roles.',
@@ -430,6 +477,94 @@ const EVENT_DEFINITIONS = {
         effectOverride: { skillErosionRate: 0.004, highSkillExitProbability: 0.02, productivityDecay: 0.993, duration: 400 }
       }
     ]
+  },
+
+  [EVENT_TYPES.CRIME_WAVE]: {
+    name: 'Crime Wave',
+    description: 'Poverty and desperation have triggered a surge in crime. Theft, robbery, and assault are skyrocketing. Businesses are closing early. Citizens are afraid. How do you respond?',
+    duration: 250,
+    icon: '🚨',
+    effects: {
+      crimeMultiplier: 2.0,
+      businessCapitalDrain: 0.01,
+      happinessPenalty: 0.1
+    },
+    choices: [
+      {
+        id: 'police_crackdown',
+        label: 'Police Crackdown',
+        emoji: '🚔',
+        description: 'Double police funding. Aggressive enforcement. Zero tolerance. Fill the prisons.',
+        tradeoff: 'Crime drops fast. Prisons overflow. Government costs soar. Civil liberties suffer.',
+        historicalNote: 'NYC\'s "broken windows" policing (1990s) reduced crime but led to mass incarceration and racial profiling. The cure had its own disease.',
+        effectOverride: { crimeMultiplier: 0.5, businessCapitalDrain: 0.003, happinessPenalty: 0.05, duration: 150 },
+        policyOverrides: { policeFunding: 0.9 },
+        govDebtPenalty: 800
+      },
+      {
+        id: 'community_programs',
+        label: 'Community Programs',
+        emoji: '🏘️',
+        description: 'Invest in education, job training, mental health, and community centers. Address root causes.',
+        tradeoff: 'Slow to take effect but lasting results. Expensive. Crime continues during the transition period.',
+        historicalNote: 'Cure Violence programs in Chicago reduced shootings 40-70% by treating violence as a public health issue, not just a law enforcement one.',
+        effectOverride: { crimeMultiplier: 1.2, businessCapitalDrain: 0.008, happinessPenalty: 0.03, duration: 350 },
+        policyOverrides: { educationFunding: 0.8, prisonReform: true },
+        govDebtPenalty: 1200
+      },
+      {
+        id: 'martial_law',
+        label: 'Martial Law',
+        emoji: '🪖',
+        description: 'Deploy the military. Impose curfews. Suspend civil rights. Restore order by force.',
+        tradeoff: 'Immediate crime suppression. Massive unrest backlash. Economy freezes under curfew.',
+        historicalNote: 'Martial law has been declared in countless countries. It always "works" short-term. The aftermath is rarely worth it.',
+        effectOverride: { crimeMultiplier: 0.2, businessCapitalDrain: 0.02, happinessPenalty: 0.2, duration: 100 },
+        govDebtPenalty: 500
+      }
+    ]
+  },
+
+  [EVENT_TYPES.VOTE_OF_NO_CONFIDENCE]: {
+    name: 'Vote of No Confidence',
+    description: 'Your approval rating has collapsed below 20%. The legislature is calling for your removal. The streets are restless. Your mandate is gone. How do you respond?',
+    duration: 100,
+    icon: '🗳️',
+    effects: {
+      unrestLevel: 0.6,
+      productionMultiplier: 0.85
+    },
+    choices: [
+      {
+        id: 'resign_gracefully',
+        label: 'Resign Gracefully',
+        emoji: '🕊️',
+        description: 'Accept the vote. Call new elections. Step down with dignity and let a new government form.',
+        tradeoff: 'Approval resets to 40. Mild economic disruption during transition. Democracy survives.',
+        historicalNote: 'Thatcher resigned in 1990 after losing party confidence. Orderly transition. The economy barely noticed.',
+        effectOverride: { unrestLevel: 0.2, productionMultiplier: 0.9, duration: 60 }
+      },
+      {
+        id: 'emergency_reforms',
+        label: 'Emergency Reforms',
+        emoji: '📜',
+        description: 'Slash taxes, boost UBI, and announce sweeping popular reforms. Buy back the public\'s trust with their own money.',
+        tradeoff: 'Expensive but may save your government. Budget takes a massive hit.',
+        historicalNote: 'Macron repealed the fuel tax after the Yellow Vest protests. Sometimes retreat is the only viable advance.',
+        effectOverride: { unrestLevel: 0.3, productionMultiplier: 0.95, duration: 80 },
+        govDebtPenalty: 2000,
+        policyOverrides: { incomeTax: 0.15, ubi: 200 }
+      },
+      {
+        id: 'cling_to_power',
+        label: 'Cling to Power',
+        emoji: '👊',
+        description: 'Reject the vote. Declare emergency powers. Suppress dissent. The economy be damned — you\'re not leaving.',
+        tradeoff: 'Unrest spikes massively. Production collapses. May cascade into revolution.',
+        historicalNote: 'Maduro rejected his no-confidence vote in 2017. Venezuela\'s economy collapsed 65%. 7 million fled the country.',
+        effectOverride: { unrestLevel: 0.95, productionMultiplier: 0.5, duration: 300 }
+      }
+    ]
   }
 }
 
@@ -451,7 +586,10 @@ export function tickEvents(eventsState, state, policies, tick, forceType = null)
 
   let newEvent = null
 
-  if (forceType) {
+  if (forceType === '_random') {
+    // Force a random event immediately (Shock Me button)
+    newEvent = _triggerRandomEvent(eventsState, state, policies, tick)
+  } else if (forceType) {
     newEvent = _triggerEvent(eventsState, state, policies, tick, forceType)
   } else {
     // Random shock chance (reduced if multiple events active)
@@ -527,7 +665,12 @@ function _triggerRandomEvent(eventsState, state, policies, tick) {
     [EVENT_TYPES.HYPERINFLATION]: (policies.printMoney > 20 || metrics.inflation > 10) ? 3 : 0.3,
     [EVENT_TYPES.GENERAL_STRIKE]: metrics.gini > 0.55 ? 2 : (metrics.unemployment > 0.15 ? 1.5 : 0.3),
     [EVENT_TYPES.BANK_RUN]: (metrics.govDebt > 3000 || metrics.inflation > 8) ? 2 : 0.3,
-    [EVENT_TYPES.BRAIN_DRAIN]: (policies.wealthConfiscation > 0.1 || policies.maximumWage > 0) ? 2 : 0.4
+    [EVENT_TYPES.BRAIN_DRAIN]: (policies.wealthConfiscation > 0.1 || policies.maximumWage > 0) ? 2 : 0.4,
+    // Crime wave: triggered by high crime rate
+    [EVENT_TYPES.CRIME_WAVE]: (metrics.crimeRate || 0) > 0.3 ? 3 : (metrics.povertyRate > 0.3 && metrics.unemployment > 0.15) ? 1.5 : 0.2,
+    // Revolution: only when inequality AND unrest are both extreme
+    [EVENT_TYPES.REVOLUTION]: (metrics.gini > 0.65 && (metrics.socialUnrest || 0) > 0.65) ? 4
+                            : (metrics.gini > 0.60 && (metrics.socialUnrest || 0) > 0.55) ? 1.5 : 0.05
   }
 
   const types = Object.keys(weights)
@@ -569,16 +712,8 @@ function _buildAndRegisterEvent(eventsState, state, tick, type, def) {
   eventsState.lastEventTick = tick
   eventsState.eventHistory.push({ id: event.id, name: def.name, icon: def.icon, tick })
 
-  // If event has choices, inject "Do Nothing" and hold for player decision
+  // If event has choices, hold for player decision
   if (def.choices?.length > 0) {
-    // Inject "Do Nothing" as the last option if not already present
-    const hasDoNothing = def.choices.some(c => c.id === 'do_nothing')
-    if (!hasDoNothing) {
-      event.definition = {
-        ...event.definition,
-        choices: [...def.choices, DO_NOTHING_CHOICE]
-      }
-    }
     event.requiresChoice = true
     eventsState.pendingChoiceEvent = event
     return event  // do NOT add to activeEvents yet
@@ -648,6 +783,24 @@ function _applyImmediateEffects(event, state) {
         for (const a of skilled.slice(0, exitCount)) {
           a.alive = false  // emigrated
         }
+      }
+      break
+
+    case EVENT_TYPES.REVOLUTION:
+      // Immediate: the top 10% richest agents lose 80% of their wealth ("expropriated")
+      {
+        const sorted = aliveAgents.filter(a => a.wealth > 0).sort((a, b) => b.wealth - a.wealth)
+        const topCount = Math.max(1, Math.floor(sorted.length * 0.1))
+        for (const a of sorted.slice(0, topCount)) {
+          // Wealth seized and destroyed (chaos, not redistribution)
+          a.wealth *= 0.2
+        }
+        // All businesses lose significant capital — looting, sabotage
+        for (const b of aliveBusinesses) {
+          b.capital *= 0.4
+        }
+        // Mark revolution in progress for renderer
+        event._revolutionActive = true
       }
       break
   }
@@ -753,5 +906,46 @@ function _applyEventEffects(event, state, policies, tick) {
         }
       }
       break
+
+    case EVENT_TYPES.CRIME_WAVE:
+      // Ongoing: businesses lose capital, agents lose happiness
+      if (Math.random() < 0.08) {
+        for (const b of state.businesses.filter(b => b.alive)) {
+          b.capital -= b.capital * effects.businessCapitalDrain
+        }
+      }
+      if (Math.random() < 0.05) {
+        for (const a of state.agents.filter(a => a.alive)) {
+          a.happiness = clamp((a.happiness || 0.5) - effects.happinessPenalty * 0.01, 0, 1)
+        }
+      }
+      break
+
+    case EVENT_TYPES.REVOLUTION: {
+      // Ongoing: wealthy agents are slowly "executed" or flee
+      const aliveAll = state.agents.filter(a => a.alive)
+      const wealthy = aliveAll.filter(a => a.wealth > 800).sort((a, b) => b.wealth - a.wealth)
+      for (const a of wealthy) {
+        if (Math.random() < effects.executionProbability) {
+          a.alive = false  // 🗡️ guillotined
+        } else if (Math.random() < effects.wealthSeizureRate) {
+          a.wealth *= 0.7  // partial seizure each tick
+        }
+      }
+      // Production stays suppressed
+      if (Math.random() < 0.05) {
+        for (const b of state.businesses.filter(b => b.alive)) {
+          b.capital -= b.capital * effects.businessCapitalDrain
+        }
+      }
+      // Propagate revolution flag to state for renderer
+      if (!state._revolutionActive) state._revolutionActive = true
+      break
+    }
   }
+}
+
+// Check if a revolution event is active
+export function isRevolutionActive(eventsState) {
+  return eventsState.activeEvents.some(e => e.type === EVENT_TYPES.REVOLUTION)
 }

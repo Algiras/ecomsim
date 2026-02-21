@@ -31,7 +31,8 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom'],
           charts: ['recharts'],
-          kokoro: ['kokoro-js']
+          kokoro: ['kokoro-js'],
+          webllm: ['@mlc-ai/web-llm']
         }
       }
     }
@@ -40,6 +41,6 @@ export default defineConfig({
     format: 'es'
   },
   optimizeDeps: {
-    exclude: ['kokoro-js']  // don't pre-bundle — lazy load as dynamic import
+    exclude: ['kokoro-js', '@mlc-ai/web-llm']  // don't pre-bundle — lazy load
   }
 })

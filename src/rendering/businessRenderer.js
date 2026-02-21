@@ -82,7 +82,7 @@ const SECTOR_ICONS = {
   luxury: '💎'
 }
 
-export function renderBusinessZones(ctx, businesses, width, height) {
+export function renderBusinessZones(ctx, businesses) {
   // Draw soft radius circles showing business "territory"
   ctx.save()
   for (const biz of businesses) {

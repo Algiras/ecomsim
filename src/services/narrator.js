@@ -1,13 +1,25 @@
-// Kokoro TTS narrator — lazily loads 82M model in-browser via WASM
-// Narrates insight pop-ups and economic events as they emerge
+// Kokoro TTS narrator — runs WASM inference in a Web Worker to avoid UI freezes
+// Implements an async queue so narrations never overlap
 
-let tts = null
-let loading = false
+let worker = null
+let workerReady = false
+let loadingWorker = false
 let loadCallbacks = []
 let audioCtx = null
+let analyserNode = null
+let speakingState = false
+let onSpeakStartCb = null
+let onSpeakEndCb = null
 
-const VOICE = 'af_sky'  // warm female narrator voice
-const MODEL_ID = 'onnx-community/Kokoro-82M-v1.0-ONNX'
+// Queue state
+let _narrateQueue = []
+let _isProcessing = false
+let _currentSource = null
+let _currentAbortController = null
+let _msgIdCounter = 0
+let _pendingWorkerCallbacks = {}
+
+const VOICE = 'af_sky'
 
 // Short scripts for each insight/event — voiced when triggered
 export const NARRATION_SCRIPTS = {
@@ -101,6 +113,20 @@ export const NARRATION_SCRIPTS = {
   policy_guaranteedJobs_off:
     "Guaranteed jobs program ended. Government workers are being released back to the private market.",
 
+  // Global economy events
+  global_oil_crisis:
+    "A global oil crisis has erupted. Energy prices are surging worldwide. Import costs are skyrocketing. Your foreign reserves are under pressure.",
+  global_recession:
+    "The world economy is in recession. Global demand has collapsed. Your export markets are drying up. Foreign reserves are draining fast.",
+  global_trade_war:
+    "A global trade war has broken out. Tariffs and counter-tariffs are flying. Supply chains are fracturing. Every nation is paying the price.",
+  global_commodity_cycle:
+    "A global commodity supercycle is underway. Raw material prices are surging worldwide. Food and housing costs are spiking across borders.",
+  global_tech_deflation:
+    "Global tech deflation. Foreign technology is flooding the market at rock-bottom prices. Your domestic tech sector is being undercut.",
+  currency_crisis:
+    "Currency crisis! Your exchange rate is in freefall. Imports are becoming unaffordable. Foreign reserves are critically low.",
+
   // Events
   pandemic:
     "A pandemic has struck. Health is dropping, businesses are closing, and workers are staying home.",
@@ -125,85 +151,186 @@ export const NARRATION_SCRIPTS = {
   bankRun:
     "Bank run! Panic is spreading. Citizens are lining up to withdraw everything. The financial system has hours before it collapses. Decide fast.",
   brainDrain:
-    "Brain drain underway. Your most skilled citizens are packing their bags. Once expertise leaves, it rarely comes back. The productivity gap will compound for decades."
+    "Brain drain underway. Your most skilled citizens are packing their bags. Once expertise leaves, it rarely comes back. The productivity gap will compound for decades.",
+  revolution:
+    "REVOLUTION. The people have had enough. Years of inequality, poverty, and broken promises have erupted into open revolt. The guillotine is ready. History is watching."
 }
+
+// ─── Worker communication ──────────────────────────────────────────────────
+
+function sendToWorker(msg) {
+  return new Promise((resolve, reject) => {
+    const id = ++_msgIdCounter
+    _pendingWorkerCallbacks[id] = { resolve, reject }
+    worker.postMessage({ ...msg, id })
+  })
+}
+
+function handleWorkerMessage(e) {
+  const { type, id } = e.data
+  const cb = _pendingWorkerCallbacks[id]
+
+  if (type === 'READY') {
+    workerReady = true
+    loadCallbacks.forEach(fn => fn())
+    loadCallbacks = []
+    if (cb) {
+      cb.resolve()
+      delete _pendingWorkerCallbacks[id]
+    }
+  } else if (type === 'AUDIO') {
+    if (cb) {
+      cb.resolve({ buffer: e.data.buffer, samplingRate: e.data.samplingRate })
+      delete _pendingWorkerCallbacks[id]
+    }
+  } else if (type === 'ERROR') {
+    console.warn('[Narrator] Worker error:', e.data.error)
+    if (cb) {
+      cb.reject(new Error(e.data.error))
+      delete _pendingWorkerCallbacks[id]
+    }
+  }
+}
+
+// ─── Lazy loading ──────────────────────────────────────────────────────────
 
 async function ensureLoaded() {
-  if (tts) return tts
-  if (loading) {
-    return new Promise((resolve) => loadCallbacks.push(resolve))
+  if (workerReady) return true
+  if (loadingWorker) {
+    return new Promise(resolve => loadCallbacks.push(resolve))
   }
 
-  loading = true
+  loadingWorker = true
   try {
-    const { KokoroTTS } = await import('kokoro-js')
-    tts = await KokoroTTS.from_pretrained(MODEL_ID, {
-      dtype: 'q4',      // ~40MB — good balance of quality and size
-      device: 'wasm'
-    })
-    loadCallbacks.forEach(cb => cb(tts))
-    loadCallbacks = []
-    loading = false
-    return tts
+    worker = new Worker(new URL('../workers/ttsWorker.js', import.meta.url), { type: 'module' })
+    worker.onmessage = handleWorkerMessage
+    await sendToWorker({ type: 'INIT' })
+    return true
   } catch (err) {
-    console.warn('[Narrator] Failed to load Kokoro TTS:', err)
-    loading = false
-    return null
+    console.warn('[Narrator] Failed to init TTS worker:', err)
+    loadingWorker = false
+    return false
   }
 }
+
+// ─── Audio context ─────────────────────────────────────────────────────────
 
 function getAudioContext() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)()
   }
+  if (!analyserNode && audioCtx) {
+    analyserNode = audioCtx.createAnalyser()
+    analyserNode.fftSize = 256
+    analyserNode.connect(audioCtx.destination)
+  }
   return audioCtx
 }
 
-let currentSource = null
+// ─── Queue-based narration ─────────────────────────────────────────────────
 
-export async function narrate(text, options = {}) {
-  if (!text) return
+export function narrate(text, options = {}) {
+  if (!text) return Promise.resolve()
 
-  // Stop any currently playing narration
-  stop()
+  return new Promise(resolve => {
+    _narrateQueue.push({ text, options, resolve })
+    _drain()
+  })
+}
+
+function _drain() {
+  if (_isProcessing || _narrateQueue.length === 0) return
+  _processNext()
+}
+
+async function _processNext() {
+  if (_narrateQueue.length === 0) {
+    _isProcessing = false
+    return
+  }
+
+  _isProcessing = true
+  const { text, options, resolve } = _narrateQueue.shift()
+  const abortController = { aborted: false }
+  _currentAbortController = abortController
 
   try {
-    const model = await ensureLoaded()
-    if (!model) return
+    const loaded = await ensureLoaded()
+    if (!loaded || abortController.aborted) {
+      resolve()
+      _isProcessing = false
+      _drain()
+      return
+    }
 
-    const audio = await model.generate(text, { voice: options.voice || VOICE })
+    // Generate audio in worker (off main thread)
+    const result = await sendToWorker({ type: 'GENERATE', text, voice: options.voice || VOICE })
+    if (abortController.aborted) {
+      resolve()
+      _isProcessing = false
+      _drain()
+      return
+    }
 
-    // audio.audio is Float32Array of PCM samples
+    // Play audio on main thread (Web Audio API requires it)
     const ctx = getAudioContext()
-    const buffer = ctx.createBuffer(1, audio.audio.length, audio.sampling_rate)
-    buffer.copyToChannel(audio.audio, 0)
+    const audioBuffer = ctx.createBuffer(1, result.buffer.length, result.samplingRate)
+    audioBuffer.copyToChannel(new Float32Array(result.buffer), 0)
 
     const source = ctx.createBufferSource()
-    source.buffer = buffer
-
-    // Optional: slight pitch/speed adjustment
+    source.buffer = audioBuffer
     if (options.rate) source.playbackRate.value = options.rate
 
-    source.connect(ctx.destination)
-    source.start()
-    currentSource = source
+    if (analyserNode) {
+      source.connect(analyserNode)
+    } else {
+      source.connect(ctx.destination)
+    }
 
-    return new Promise((resolve) => {
-      source.onended = () => {
-        currentSource = null
-        resolve()
-      }
-    })
+    source.start()
+    _currentSource = source
+    speakingState = true
+    onSpeakStartCb?.()
+
+    source.onended = () => {
+      _currentSource = null
+      speakingState = false
+      onSpeakEndCb?.()
+      resolve()
+      _isProcessing = false
+      _drain() // chain to next queued narration
+    }
   } catch (err) {
     console.warn('[Narrator] Narration error:', err)
+    resolve()
+    _isProcessing = false
+    _drain()
   }
 }
 
 export function stop() {
-  if (currentSource) {
-    try { currentSource.stop() } catch {}
-    currentSource = null
+  // Abort any in-flight generation
+  if (_currentAbortController) {
+    _currentAbortController.aborted = true
+    _currentAbortController = null
   }
+
+  // Stop current playback
+  if (_currentSource) {
+    try { _currentSource.stop() } catch {}
+    _currentSource = null
+  }
+
+  speakingState = false
+  onSpeakEndCb?.()
+
+  // Clear queue and resolve all pending promises
+  const pending = _narrateQueue.splice(0)
+  for (const item of pending) {
+    item.resolve()
+  }
+
+  _isProcessing = false
 }
 
 export function narrateInsight(insightId) {
@@ -216,9 +343,7 @@ export function narrateEvent(eventType) {
   if (script) narrate(script)
 }
 
-// Called when a policy toggle changes — narrates the activation/deactivation
 export function narratePolicy(key, value) {
-  // For toggles: use _on / _off scripts
   const onKey = `policy_${key}_on`
   const offKey = `policy_${key}_off`
   if (value === true || value === false) {
@@ -226,17 +351,31 @@ export function narratePolicy(key, value) {
     if (script) narrate(script)
     return
   }
-  // For sliders: narrate only on first non-zero activation
   if (value > 0 && NARRATION_SCRIPTS[onKey]) {
     narrate(NARRATION_SCRIPTS[onKey])
   }
 }
 
-// Preload model in background (call after first user interaction)
 export function preloadNarrator() {
   ensureLoaded()
 }
 
 export function isLoaded() {
-  return tts !== null
+  return workerReady
+}
+
+export function getAnalyserNode() {
+  return analyserNode
+}
+
+export function isSpeaking() {
+  return speakingState
+}
+
+export function onSpeakStart(cb) {
+  onSpeakStartCb = cb
+}
+
+export function onSpeakEnd(cb) {
+  onSpeakEndCb = cb
 }

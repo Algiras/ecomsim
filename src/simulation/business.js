@@ -56,6 +56,13 @@ export class Business {
     // Owner
     this.ownerId = options.ownerId ?? null
 
+    // Stock market
+    this.sharesOutstanding = 100
+    this.sharesAvailable = 100  // shares not held by anyone
+    this.sharePrice = 0
+    this.isPublic = false
+    this.dividendRate = 0
+
     // History
     this.age = 0
     this.totalProduced = 0
@@ -77,9 +84,14 @@ export class Business {
     this._produce(policies)
     this._sellGoods(state.prices)
     this._payWages(policies)
+    this._applySecurityCosts(state)
+    this._applyDepreciation()
     this._adjustPriceStrategy(state)
     this._adjustWorkforce(state, policies)
     this._checkBankruptcy(state)
+    this._checkIPO()
+    this._updateSharePrice(state)
+    this._payDividends(state)
     this._updateVisuals()
   }
 
@@ -132,8 +144,31 @@ export class Business {
     if (this.profit > this.revenue * PROFIT_MARGIN_TARGET * 2) {
       this.wageOffered = Math.min(this.wageOffered * 1.02, 100)
     } else if (this.profit < 0 && this.employees.length > 0) {
-      this.wageOffered = Math.max(this.wageOffered * 0.98, minWage)
+      if (this.capital < BUSINESS_BANKRUPTCY_THRESHOLD / 2) {
+        this.wageOffered = Math.max(this.wageOffered * 0.92, minWage) // emergency cut
+      } else {
+        this.wageOffered = Math.max(this.wageOffered * 0.95, minWage)
+      }
     }
+  }
+
+  _applySecurityCosts(state) {
+    // Higher crime rate → higher security costs for businesses
+    const crimeRate = state.metrics?.crimeRate || 0
+    if (crimeRate > 0) {
+      const securityCost = crimeRate * this.employees.length * 0.1
+      this.capital -= securityCost
+    }
+  }
+
+  _applyDepreciation() {
+    // Capital depreciation: maintenance, equipment wear, overhead
+    // ~0.3% per tick — prevents unbounded capital accumulation
+    if (this.capital > 500) {
+      this.capital -= (this.capital - 500) * 0.003
+    }
+    // Fixed operating costs: even idle businesses bleed money
+    this.capital -= this.employees.length * 0.5
   }
 
   _adjustPriceStrategy(state) {
@@ -142,6 +177,12 @@ export class Business {
     const costPerUnit = this.employees.length > 0
       ? (avgWage * this.employees.length) / Math.max(this.production, 1)
       : 1
+
+    // Cost-push inflation: rising costs push prices up
+    if (this._prevCostPerUnit && costPerUnit > this._prevCostPerUnit * 1.02) {
+      this.price *= 1 + (costPerUnit / this._prevCostPerUnit - 1) * 0.3
+    }
+    this._prevCostPerUnit = costPerUnit
 
     // If inventory is piling up, lower price; if low, raise price
     const inventoryRatio = this.inventory / this.maxInventory
@@ -154,6 +195,13 @@ export class Business {
     // Anti-monopoly: if market share > 40%, regulators force lower prices
     if (state.policies?.antiMonopoly && this.dominance > 0.4) {
       this.price *= 0.99
+    }
+
+    // Price fixing: dominant businesses inflate prices when unregulated
+    if (!state.policies?.antiMonopoly && this.dominance > 0.7) {
+      this.price *= 1.035  // aggressive gouging
+    } else if (!state.policies?.antiMonopoly && this.dominance > 0.5) {
+      this.price *= 1.02   // collude to raise prices
     }
   }
 
@@ -193,7 +241,7 @@ export class Business {
     unemployed.sort((a, b) => b.skill - a.skill)
     const candidate = unemployed[0]
 
-    const wage = Math.max(this.wageOffered, policies.minWage || 0)
+    const wage = Math.max(this.wageOffered, state.policies?.minWage || 0)
     candidate.hire(this, wage)
     this.employees.push(candidate.id)
     this.hiringCooldown = 10
@@ -231,6 +279,18 @@ export class Business {
     }
     this.employees = []
 
+    // Liquidate shares — pay shareholders capital / shares
+    if (this.isPublic && this.capital > 0 && state.agents) {
+      const perShare = Math.max(0, this.capital / this.sharesOutstanding)
+      for (const agent of state.agents) {
+        if (!agent.alive || !agent.portfolio) continue
+        const idx = agent.portfolio.findIndex(p => p.businessId === this.id)
+        if (idx === -1) continue
+        agent.wealth += agent.portfolio[idx].shares * perShare
+        agent.portfolio.splice(idx, 1)
+      }
+    }
+
     // Notify owner
     if (this.ownerId) {
       const owner = state.agents?.find(a => a.id === this.ownerId)
@@ -241,6 +301,63 @@ export class Business {
         owner._updateState?.()
       }
     }
+  }
+
+  _checkIPO() {
+    if (this.isPublic) return
+    if (this.age > 100 && this.capital > 1000 && this.profit > 0) {
+      this.isPublic = true
+      // Owner retains 40 shares, 60 available for purchase
+      this.sharesAvailable = 60
+      this.events.push('Went public via IPO')
+    }
+  }
+
+  _updateSharePrice(state) {
+    if (!this.isPublic) return
+    const avgProfit = this.profitHistory.length > 0
+      ? this.profitHistory.reduce((s, v) => s + v, 0) / this.profitHistory.length
+      : 0
+    // Rate-sensitive PE: low rates → higher valuations (asset price channel)
+    const ratePremium = Math.max(0, 0.05 - (state.policies?.interestRate || 0.05)) * 100
+    const peMultiple = 10 + (this.marketShare || 0) * 20 + ratePremium
+    this.sharePrice = Math.max(0, avgProfit * peMultiple / this.sharesOutstanding)
+    // Inflation discount
+    const avgExpInfl = state.market?.avgExpectedInflation || 0.02
+    if (avgExpInfl > 0.05) {
+      this.sharePrice *= 1 - Math.max(0, (avgExpInfl - 0.05) * 2)
+      this.sharePrice = Math.max(0, this.sharePrice)
+    }
+  }
+
+  _payDividends(state) {
+    if (!this.isPublic || this.profit <= 0) return
+    if (this.age % 10 !== 0) return  // pay dividends every 10 ticks
+
+    this.dividendRate = clamp(0.1 + Math.random() * 0.2, 0.1, 0.3)
+    const totalDividend = this.profit * this.dividendRate
+    const capitalGainsTax = state.policies?.capitalGainsTax || 0.15
+
+    // Distribute to shareholders (agents with portfolio entries)
+    const agents = state.agents || []
+    for (const agent of agents) {
+      if (!agent.alive || !agent.portfolio) continue
+      const holding = agent.portfolio.find(p => p.businessId === this.id)
+      if (!holding || holding.shares <= 0) continue
+
+      const share = holding.shares / this.sharesOutstanding
+      const payout = totalDividend * share
+      const afterTax = payout * (1 - capitalGainsTax)
+      agent.wealth += afterTax
+      agent.investmentIncome += afterTax
+    }
+
+    // Tax revenue goes to govBudget
+    if (state.metrics) {
+      state.metrics.govBudget = (state.metrics.govBudget || 0) + totalDividend * capitalGainsTax * 0.1
+    }
+
+    this.capital -= totalDividend
   }
 
   _updateVisuals() {
@@ -277,7 +394,12 @@ export class Business {
       age: this.age,
       radius: this.radius,
       pulse: this.pulse,
-      ownerId: this.ownerId
+      ownerId: this.ownerId,
+      isPublic: this.isPublic,
+      sharePrice: this.sharePrice,
+      sharesOutstanding: this.sharesOutstanding,
+      sharesAvailable: this.sharesAvailable,
+      dividendRate: this.dividendRate
     }
   }
 }
@@ -293,8 +415,8 @@ export function createInitialBusinesses(count, agents, scenario = {}) {
     for (let i = 0; i < perSector; i++) {
       const business = new Business({
         sector,
-        capital: BUSINESS_START_CAPITAL * (scenario.startCapitalMultiplier || 1),
-        productivity: clamp(normalRand(scenario.avgProductivity || 1.0, 0.2), 0.3, 2.5)
+        capital: BUSINESS_START_CAPITAL * (scenario.startCapitalMultiplier || 1) * (0.5 + Math.random()),
+        productivity: clamp(normalRand(scenario.avgProductivity || 1.0, 0.2), 0.3, 2.5) * (0.7 + Math.random() * 0.6)
       })
 
       // Assign an owner from unemployed agents

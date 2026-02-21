@@ -1,5 +1,99 @@
+// ─── Economic Model Presets ──────────────────────────────────────────────────
+// Real-world-inspired starting configurations for Free Play
+
+export const ECONOMIC_MODELS = [
+  {
+    id: 'usa',
+    name: 'United States',
+    flag: '🇺🇸',
+    desc: 'Mixed economy. Moderate taxes, limited safety net, strong private sector.',
+    policies: {
+      incomeTax: 0.25, corporateTax: 0.21, capitalGainsTax: 0.15,
+      minWage: 7, ubi: 0, interestRate: 0.05, educationFunding: 0.3,
+      unemploymentBenefit: 50, publicHealthcare: false, wealthTax: 0,
+      policeFunding: 0.5, financialOversight: 0.3, reserveRequirement: 0.1,
+      depositInsurance: true, maxLoanToValue: 0.8, antiMonopoly: false,
+      subsidiesFarming: true, openBorders: false
+    }
+  },
+  {
+    id: 'nordic',
+    name: 'Nordic Model',
+    flag: '🇸🇪',
+    desc: 'High taxes, universal services, strong unions, open markets.',
+    policies: {
+      incomeTax: 0.45, corporateTax: 0.22, capitalGainsTax: 0.30,
+      minWage: 18, ubi: 0, interestRate: 0.03, educationFunding: 0.9,
+      unemploymentBenefit: 200, publicHealthcare: true, wealthTax: 0.01,
+      policeFunding: 0.4, financialOversight: 0.5, reserveRequirement: 0.1,
+      depositInsurance: true, maxLoanToValue: 0.85, antiMonopoly: true,
+      subsidiesFarming: true, openBorders: true, mandatoryProfitShare: 0.1
+    }
+  },
+  {
+    id: 'singapore',
+    name: 'Singapore',
+    flag: '🇸🇬',
+    desc: 'Low taxes, minimal welfare, pro-business, strong regulation.',
+    policies: {
+      incomeTax: 0.15, corporateTax: 0.17, capitalGainsTax: 0,
+      minWage: 0, ubi: 0, interestRate: 0.03, educationFunding: 0.7,
+      unemploymentBenefit: 0, publicHealthcare: true, wealthTax: 0,
+      policeFunding: 0.6, financialOversight: 0.7, reserveRequirement: 0.1,
+      depositInsurance: true, maxLoanToValue: 0.75, antiMonopoly: true,
+      subsidiesFarming: false, openBorders: true
+    }
+  },
+  {
+    id: 'eu',
+    name: 'European Union',
+    flag: '🇪🇺',
+    desc: 'Social market economy. Strong labor protections, moderate taxes.',
+    policies: {
+      incomeTax: 0.35, corporateTax: 0.25, capitalGainsTax: 0.25,
+      minWage: 12, ubi: 0, interestRate: 0.04, educationFunding: 0.6,
+      unemploymentBenefit: 120, publicHealthcare: true, wealthTax: 0,
+      policeFunding: 0.4, financialOversight: 0.4, reserveRequirement: 0.08,
+      depositInsurance: true, maxLoanToValue: 0.8, antiMonopoly: true,
+      subsidiesFarming: true, openBorders: true, fourDayWeek: false
+    }
+  },
+  {
+    id: 'libertarian',
+    name: 'Libertarian',
+    flag: '🗽',
+    desc: 'Minimal government. No income tax, no welfare, gold-standard banking.',
+    policies: {
+      incomeTax: 0, corporateTax: 0, capitalGainsTax: 0,
+      minWage: 0, ubi: 0, interestRate: 0.02, educationFunding: 0,
+      unemploymentBenefit: 0, publicHealthcare: false, wealthTax: 0,
+      policeFunding: 0.2, financialOversight: 0, reserveRequirement: 0.3,
+      depositInsurance: false, maxLoanToValue: 0.6, antiMonopoly: false,
+      subsidiesFarming: false, openBorders: true
+    }
+  }
+]
+
 export const SCENARIOS = {
   // ─── Sandbox scenarios ───────────────────────────────────────────────────
+
+  default: {
+    id: 'default',
+    name: 'Balanced Start',
+    subtitle: 'US-inspired defaults. Tweak as you go.',
+    description: 'A mixed economy with moderate taxes, basic safety nets, and room to experiment. Good starting point for learning.',
+    icon: '⚖️',
+    difficulty: 'Easy',
+    color: '#6366f1',
+    isHistorical: false,
+    policies: {},  // uses DEFAULT_POLICIES from constants.js
+    agentCount: 200,
+    businessCount: 20,
+    wealthMultiplier: 1.0,
+    wealthInequality: 1.0,
+    avgSkill: 0.5,
+    lesson: 'Every policy has tradeoffs. Start here and learn what each lever does.'
+  },
 
   freeMarket: {
     id: 'freeMarket',

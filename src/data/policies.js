@@ -65,6 +65,41 @@ export const POLICY_DEFINITIONS = [
     tradeoff: '↑ Fights inflation but ↓ Business investment'
   },
   {
+    id: 'reserveRequirement',
+    name: 'Reserve Requirement',
+    category: 'monetary',
+    type: 'slider',
+    min: 0,
+    max: 0.5,
+    step: 0.05,
+    format: 'percent',
+    icon: '🏦',
+    description: 'Fraction of deposits banks must hold in reserve. Higher = safer banks but less lending.',
+    tradeoff: '↑ Bank stability but ↓ Credit availability'
+  },
+  {
+    id: 'depositInsurance',
+    name: 'Deposit Insurance',
+    category: 'monetary',
+    type: 'toggle',
+    icon: '🛡️',
+    description: 'Government guarantees bank deposits up to $1000. Prevents bank runs but creates moral hazard.',
+    tradeoff: '↑ Depositor confidence but banks may take more risks'
+  },
+  {
+    id: 'maxLoanToValue',
+    name: 'Max Loan-to-Value',
+    category: 'monetary',
+    type: 'slider',
+    min: 0.5,
+    max: 1.0,
+    step: 0.05,
+    format: 'percent',
+    icon: '🏠',
+    description: 'Maximum mortgage as a fraction of property value. Lower = bigger down payment required.',
+    tradeoff: '↑ Lending safety but ↓ Home ownership accessibility'
+  },
+  {
     id: 'antiMonopoly',
     name: 'Anti-Monopoly Laws',
     category: 'regulation',
@@ -293,6 +328,82 @@ export const POLICY_DEFINITIONS = [
     tradeoff: '↑ Financial inclusion + savings but ↑ Gov infrastructure cost'
   },
 
+  // ─── Law & Order ─────────────────────────────────────────────────────────────
+  {
+    id: 'policeFunding',
+    name: 'Police Funding',
+    category: 'security',
+    type: 'slider',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    format: 'percent',
+    icon: '🚔',
+    description: 'Funding for law enforcement. Higher funding deters street crime and increases arrest rates, but costs the government.',
+    tradeoff: '↓ Street crime but ↑ Government spending'
+  },
+  {
+    id: 'financialOversight',
+    name: 'Financial Oversight',
+    category: 'security',
+    type: 'slider',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    format: 'percent',
+    icon: '🔍',
+    description: 'Funding for corporate crime investigation. Detects fraud, embezzlement, and price fixing. Expensive but protects the economy.',
+    tradeoff: '↓ Corporate crime but ↑ Government spending + regulatory burden'
+  },
+  {
+    id: 'prisonReform',
+    name: 'Prison Reform',
+    category: 'security',
+    type: 'toggle',
+    icon: '🏛️',
+    description: 'Rehabilitative programs for inmates. Reduces reoffending rates but costs money. Treats causes rather than symptoms.',
+    tradeoff: '↓ Recidivism but ↑ Government spending'
+  },
+
+  // ─── Markets ────────────────────────────────────────────────────────────────
+  {
+    id: 'capitalGainsTax',
+    name: 'Capital Gains Tax',
+    category: 'fiscal',
+    type: 'slider',
+    min: 0,
+    max: 0.5,
+    step: 0.01,
+    format: 'percent',
+    icon: '📈',
+    description: 'Tax on stock dividends and investment income. Higher rates reduce inequality but discourage investment.',
+    tradeoff: '↑ Revenue + ↓ Inequality but ↓ Investment incentive'
+  },
+
+  // ─── Trade & FX ─────────────────────────────────────────────────────────────
+  {
+    id: 'exportSubsidies',
+    name: 'Export Subsidies',
+    category: 'trade',
+    type: 'slider',
+    min: 0,
+    max: 0.5,
+    step: 0.05,
+    format: 'percent',
+    icon: '🚢',
+    description: 'Government subsidizes exporters to make domestic goods competitive abroad. Costs government revenue but improves trade balance.',
+    tradeoff: '↑ Exports + trade surplus but ↑ Government spending'
+  },
+  {
+    id: 'foreignReserveIntervention',
+    name: 'FX Intervention',
+    category: 'trade',
+    type: 'toggle',
+    icon: '💱',
+    description: 'Central bank buys/sells foreign currency to stabilize the exchange rate. Burns foreign reserves but prevents wild currency swings.',
+    tradeoff: '↑ FX stability but ↓ Foreign reserves'
+  },
+
   // ─── Chaos Levers ────────────────────────────────────────────────────────────
   {
     id: 'helicopterMoney',
@@ -373,6 +484,8 @@ export const POLICY_CATEGORIES = {
   welfare: { label: 'Welfare', color: '#ec4899' },
   regulation: { label: 'Regulation', color: '#8b5cf6' },
   public: { label: 'Public Services', color: '#06b6d4' },
+  security: { label: 'Law & Order', color: '#dc2626' },
   weird: { label: '⚗️ Weird Laws', color: '#f97316' },
-  chaos: { label: '💣 Chaos Levers', color: '#dc2626' }
+  trade: { label: 'Trade & FX', color: '#0ea5e9' },
+  chaos: { label: '💣 Chaos Levers', color: '#b91c1c' }
 }

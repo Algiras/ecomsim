@@ -6,7 +6,7 @@ export const WORKER_UPDATE_EVERY = 3 // send state to UI every N ticks
 // ─── Population ─────────────────────────────────────────────────────────────
 
 export const INITIAL_AGENTS = 200
-export const MAX_AGENTS = 500
+export const MAX_AGENTS = 2000  // soft limit for performance; population pressure handles overpop
 export const MIN_AGENTS = 20
 
 export const BIRTH_RATE_BASE = 0.0003 // per agent per tick
@@ -68,12 +68,12 @@ export const INITIAL_BUSINESSES = 20
 export const MAX_BUSINESSES = 80
 export const MIN_EMPLOYEES = 1
 export const MAX_EMPLOYEES = 15
-export const BUSINESS_START_CAPITAL = 500
-export const BUSINESS_BANKRUPTCY_THRESHOLD = -200 // goes bankrupt if capital < this
+export const BUSINESS_START_CAPITAL = 350
+export const BUSINESS_BANKRUPTCY_THRESHOLD = -100 // goes bankrupt if capital < this
 export const BUSINESS_HIRE_THRESHOLD = 0.7  // hire when utilization > 70%
 export const BUSINESS_FIRE_THRESHOLD = 0.3  // fire when utilization < 30%
-export const PROFIT_MARGIN_TARGET = 0.15    // target profit margin
-export const STARTUP_PROBABILITY = 0.00005  // per unemployed agent per tick
+export const PROFIT_MARGIN_TARGET = 0.12    // target profit margin
+export const STARTUP_PROBABILITY = 0.00003  // per unemployed agent per tick
 
 // ─── Wages ───────────────────────────────────────────────────────────────────
 
@@ -83,15 +83,15 @@ export const WAGE_NEGOTIATION_POWER = 0.3  // 0=employer wins, 1=worker wins
 
 // ─── Agent finances ──────────────────────────────────────────────────────────
 
-export const INITIAL_WEALTH_MEAN = 500
-export const INITIAL_WEALTH_STD = 300
+export const INITIAL_WEALTH_MEAN = 250
+export const INITIAL_WEALTH_STD = 200
 export const CONSUMPTION_RATE = {
   food: 0.15,    // fraction of income spent on food
   housing: 0.3,
   tech: 0.1,
   luxury: 0.05
 }
-export const SAVINGS_RATE_BASE = 0.1
+export const SAVINGS_RATE_BASE = 0.08
 export const POVERTY_THRESHOLD = 100    // wealth below this = poverty
 export const RICH_THRESHOLD = 5000      // wealth above this = wealthy
 
@@ -101,8 +101,8 @@ export const CANVAS_WIDTH = 800
 export const CANVAS_HEIGHT = 600
 export const AGENT_RADIUS = 4
 export const BUSINESS_RADIUS = 10
-export const MOVE_SPEED = 0.8
-export const WANDER_STRENGTH = 0.2
+export const MOVE_SPEED = 0.35
+export const WANDER_STRENGTH = 0.06
 
 // ─── Policy defaults ─────────────────────────────────────────────────────────
 
@@ -129,24 +129,48 @@ export const DEFAULT_POLICIES = {
   mandatoryProfitShare: 0,  // 0–0.3 (fraction of profit redistributed to employees)
   landValueTax: 0,          // 0–0.05 annual LVT rate
   banAdvertising: false,
+  reserveRequirement: 0.1,  // 0-0.5, fraction banks must hold
+  depositInsurance: true,    // toggle, protects depositors on bank failure
+  maxLoanToValue: 0.8,      // 0-1.0, max mortgage as fraction of housing cost
   debtJubilee: false,       // one-time trigger — engine resets it
   lotteryRedistribution: false,
   sumptuary: false,
   degrowth: false,
   algoCentralPlanning: false,
   universalBankAccount: false,
+  // ─── Law & Order ─────────────────────────────────────────────────────────
+  policeFunding: 0.3,           // 0-1, fraction of budget to policing
+  financialOversight: 0.3,      // 0-1, corporate crime investigation intensity
+  prisonReform: false,          // toggle: reduces recidivism, costs money
   // ─── Chaos Levers ─────────────────────────────────────────────────────────
   helicopterMoney: 0,         // $ dropped to every citizen per tick (0 = off)
   maximumWage: 0,             // hard income cap (0 = off)
   wealthConfiscation: 0,      // 0–0.5 fraction seized above $1000 threshold
   nationalizeIndustries: false,
   punitiveTargiffs: 0,        // 0–2.0 = 0–200% price surcharge on all goods
-  guaranteedJobs: false
+  guaranteedJobs: false,
+  // ─── Markets ──────────────────────────────────────────────────────────────
+  capitalGainsTax: 0.15,        // 0–0.5 tax on stock dividends
+  // ─── Trade & FX ──────────────────────────────────────────────────────────
+  exportSubsidies: 0,           // 0–0.5 government subsidizes exports
+  foreignReserveIntervention: false  // central bank defends FX rate
 }
+
+// ─── Global Economy ──────────────────────────────────────────────────────────
+
+export const WORLD_PRICE_VOLATILITY = 0.002
+export const IMPORT_SURGE_FACTOR = 1.05
+export const EXPORT_DRAIN_FACTOR = 0.95
+export const GLOBAL_SHOCK_PROBABILITY = 0.0001
+export const INITIAL_FOREIGN_RESERVES = 500
+export const FX_RATE_DIFFERENTIAL = 0.0005
+export const FX_MEAN_REVERSION = 0.0003
+export const FX_RATE_MIN = 0.3
+export const FX_RATE_MAX = 3.0
 
 // ─── Economic shocks ─────────────────────────────────────────────────────────
 
-export const SHOCK_PROBABILITY = 0.0002   // per tick chance of random event
+export const SHOCK_PROBABILITY = 0.0004   // per tick chance of random event
 
 // ─── Spatial hash ────────────────────────────────────────────────────────────
 
@@ -156,6 +180,19 @@ export const SPATIAL_CELL_SIZE = 60
 
 export const METRICS_HISTORY_LENGTH = 200  // data points kept for charts
 export const METRICS_UPDATE_EVERY = 10     // compute metrics every N ticks
+
+// ─── Policy Lag (ticks for numeric slider policies to take full effect) ──────
+
+export const POLICY_LAG_TICKS = {
+  interestRate: 150, printMoney: 30, helicopterMoney: 20,
+  incomeTax: 80, corporateTax: 100, minWage: 60, ubi: 50,
+  educationFunding: 200, wealthTax: 80, reserveRequirement: 100,
+  maxLoanToValue: 80, policeFunding: 40, financialOversight: 60,
+  robotTax: 80, mandatoryProfitShare: 60, landValueTax: 80,
+  wealthConfiscation: 40, maximumWage: 60, punitiveTargiffs: 50,
+  unemploymentBenefit: 40, capitalGainsTax: 80,
+  exportSubsidies: 60
+}
 
 // ─── Scenarios ───────────────────────────────────────────────────────────────
 

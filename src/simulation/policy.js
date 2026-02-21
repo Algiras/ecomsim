@@ -132,14 +132,27 @@ export function applyPolicyEffects(state, policies, market) {
     }
   }
 
-  // Debt Jubilee: one-time reset of negative wealth (engine should clear this flag after applying)
+  // Debt Jubilee: one-time reset of negative wealth + clear all loans
   if (policies.debtJubilee) {
-    let cleared = 0
     for (const a of agents.filter(a => a.alive && a.wealth < 0)) {
       a.wealth = 0
-      cleared++
     }
-    // Flag for engine to turn off after one application
+    // Clear all active loans — banks take the write-off hit
+    for (const a of agents.filter(a => a.alive && a.loans?.length > 0)) {
+      for (const loan of a.loans) {
+        // Bank takes the loss
+        const banks = state.banks || []
+        const bank = banks.find(b => b.id === loan.bankId)
+        if (bank) {
+          bank.reserves -= loan.remaining * 0.5
+          bank.loanBook = bank.loanBook.filter(l => l.id !== loan.id)
+        }
+        loan.active = false
+      }
+      a.loans = []
+      a.monthlyLoanPayment = 0
+      a.hasMortgage = false
+    }
     state._jubileeApplied = true
   }
 
@@ -196,6 +209,26 @@ export function applyPolicyEffects(state, policies, market) {
         a.wealth = clamp(a.wealth + 0.5, 0, 20)
       }
     }
+  }
+
+  // ─── Law & Order ───────────────────────────────────────────────────────────
+
+  // Police funding: costs government budget
+  if (policies.policeFunding > 0) {
+    const policeCost = agents.filter(a => a.alive).length * policies.policeFunding * 0.05
+    state.govBudget = (state.govBudget || 0) - policeCost
+  }
+
+  // Financial oversight: costs government budget
+  if (policies.financialOversight > 0) {
+    const oversightCost = businesses.filter(b => b.alive).length * policies.financialOversight * 0.03
+    state.govBudget = (state.govBudget || 0) - oversightCost
+  }
+
+  // Prison reform: costs money, reduces reoffend risk for incarcerated agents
+  if (policies.prisonReform) {
+    const inmates = agents.filter(a => a.alive && a.incarcerated)
+    state.govBudget = (state.govBudget || 0) - inmates.length * 0.02
   }
 
   // ─── Chaos Levers ──────────────────────────────────────────────────────────
@@ -289,15 +322,21 @@ export function validatePolicy(key, value) {
     unemploymentBenefit: [0, 500],
     printMoney: [0, 100],
     wealthTax: [0, 0.05],
+    reserveRequirement: [0, 0.5],
+    maxLoanToValue: [0.5, 1.0],
     // Weird laws
     robotTax: [0, 0.5],
     mandatoryProfitShare: [0, 0.3],
     landValueTax: [0, 0.05],
+    // Law & Order
+    policeFunding: [0, 1],
+    financialOversight: [0, 1],
     // Chaos levers
     helicopterMoney: [0, 500],
     maximumWage: [0, 500],
     wealthConfiscation: [0, 0.5],
-    punitiveTargiffs: [0, 2.0]
+    punitiveTargiffs: [0, 2.0],
+    capitalGainsTax: [0, 0.5]
   }
 
   if (key in bounds) {

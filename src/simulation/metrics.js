@@ -23,6 +23,36 @@ export function createMetricsState() {
     totalTaxRevenue: 0,
     govBudget: 0,
     govDebt: 0,
+    govInterestPayments: 0,
+    // Crime
+    crimeRate: 0,
+    streetCrimeCount: 0,
+    corporateCrimeCount: 0,
+    prisonPopulation: 0,
+    // Banking
+    totalPrivateDebt: 0,
+    nonPerformingLoans: 0,
+    avgCreditScore: 0,
+    bankCount: 0,
+    mortgageRate: 0,
+    // Debt spirals
+    agentsInDebtSpiral: 0,
+    avgDebtToIncome: 0,
+    // Inflation expectations
+    inflationExpectations: 0.02,
+    centralBankCredibility: 1.0,
+    // Stock market
+    totalMarketCap: 0,
+    publicCompanies: 0,
+    avgDividendYield: 0,
+    // Trade & FX
+    tradeBalance: 0,
+    fxRate: 1.0,
+    foreignReserves: 500,
+    exports: 0,
+    imports: 0,
+    // Approval
+    pendingPolicyCount: 0,
     history: {
       gdp: [],
       gini: [],
@@ -36,7 +66,17 @@ export function createMetricsState() {
       govBudget: [],
       businessCount: [],
       medianWealth: [],
-      sectorPrices: { food: [], housing: [], tech: [], luxury: [] }
+      privateDebt: [],
+      creditScore: [],
+      crime: [],
+      prisonPop: [],
+      sectorPrices: { food: [], housing: [], tech: [], luxury: [] },
+      debtSpiral: [],
+      inflationExp: [],
+      cbCredibility: [],
+      marketCap: [],
+      fxRate: [],
+      tradeBalance: []
     }
   }
 }
@@ -86,7 +126,22 @@ export function updateMetrics(metrics, state, market, policies) {
   const govSpending = _computeGovSpending(aliveAgents, policies)
   metrics.totalTaxRevenue = taxRevenue
   metrics.govBudget = taxRevenue - govSpending
-  metrics.govDebt += -metrics.govBudget * 0.1 // simplification
+  metrics.govDebt += -metrics.govBudget * 0.1
+
+  // Interest on government debt — sovereign debt spiral
+  const debtToGdpRatio = Math.abs(metrics.govDebt) / Math.max(metrics.gdp, 1)
+  const riskPremium = debtToGdpRatio > 1 ? (debtToGdpRatio - 1) * 0.02 : 0
+  const govInterestRate = (policies.interestRate || 0.05) + riskPremium
+  if (metrics.govDebt > 0) {
+    const interestPayment = metrics.govDebt * govInterestRate * 0.01
+    metrics.govDebt += interestPayment
+    metrics.govInterestPayments = interestPayment
+  } else {
+    metrics.govInterestPayments = 0
+  }
+
+  // Clamp debt to a sane range — village economies don't have trillions
+  metrics.govDebt = Math.max(-50000, Math.min(50000, metrics.govDebt))
 
   // History (push and trim)
   const hist = metrics.history
@@ -107,6 +162,103 @@ export function updateMetrics(metrics, state, market, policies) {
   for (const sector of ['food', 'housing', 'tech', 'luxury']) {
     _pushHistory(hist.sectorPrices[sector], market.prices?.[sector] || 0)
   }
+
+  // Crime metrics
+  const crimeLog = state._crimeLog || []
+  metrics.streetCrimeCount = crimeLog.filter(c => c.category === 'street').length
+  metrics.corporateCrimeCount = crimeLog.filter(c => c.category === 'corporate').length
+  const totalCrimes = metrics.streetCrimeCount + metrics.corporateCrimeCount
+  metrics.crimeRate = metrics.population > 0 ? (totalCrimes / metrics.population) * 1000 : 0
+  metrics.prisonPopulation = aliveAgents.filter(a => a.incarcerated).length
+  // Clear crime log after metrics update (accumulates between updates)
+  state._crimeLog = []
+
+  // Crime history
+  if (!hist.crime) hist.crime = []
+  if (!hist.prisonPop) hist.prisonPop = []
+  _pushHistory(hist.crime, metrics.crimeRate)
+  _pushHistory(hist.prisonPop, metrics.prisonPopulation)
+
+  // Banking metrics
+  const banks = state.banks || []
+  const aliveBanks = banks.filter(b => b.alive)
+  metrics.bankCount = aliveBanks.length
+
+  // Total private debt (sum of all agent loans)
+  metrics.totalPrivateDebt = aliveAgents.reduce((sum, a) => {
+    return sum + (a.loans || []).reduce((s, l) => s + (l.remaining || 0), 0)
+  }, 0)
+
+  // Non-performing loans
+  metrics.nonPerformingLoans = aliveBanks.reduce((sum, b) => {
+    return sum + (b.loanBook || []).filter(l => l.active && l.ticksOverdue > 0).length
+  }, 0)
+
+  // Average credit score
+  const creditScores = aliveAgents.map(a => a.creditScore || 500)
+  metrics.avgCreditScore = creditScores.length > 0
+    ? creditScores.reduce((s, v) => s + v, 0) / creditScores.length
+    : 500
+
+  // Effective mortgage rate
+  const baseRate = policies.interestRate || 0.05
+  const avgSpread = aliveBanks.length > 0
+    ? aliveBanks.reduce((s, b) => s + b.interestSpread, 0) / aliveBanks.length
+    : 0.02
+  metrics.mortgageRate = baseRate + avgSpread
+
+  // Banking history
+  if (!hist.privateDebt) hist.privateDebt = []
+  if (!hist.creditScore) hist.creditScore = []
+  _pushHistory(hist.privateDebt, metrics.totalPrivateDebt)
+  _pushHistory(hist.creditScore, metrics.avgCreditScore)
+
+  // Debt spiral metrics
+  metrics.agentsInDebtSpiral = aliveAgents.filter(a => a.inDebtSpiral).length
+  const agentsWithIncome = aliveAgents.filter(a => a.income > 0)
+  metrics.avgDebtToIncome = agentsWithIncome.length > 0
+    ? agentsWithIncome.reduce((s, a) => {
+        const debt = (a.loans || []).reduce((d, l) => d + (l.remaining || 0), 0)
+        return s + debt / Math.max(a.income, 1)
+      }, 0) / agentsWithIncome.length
+    : 0
+  if (!hist.debtSpiral) hist.debtSpiral = []
+  _pushHistory(hist.debtSpiral, metrics.agentsInDebtSpiral)
+
+  // Inflation expectations metrics
+  metrics.inflationExpectations = market.avgExpectedInflation || 0.02
+  metrics.centralBankCredibility = market.centralBankCredibility || 1.0
+  if (!hist.inflationExp) hist.inflationExp = []
+  if (!hist.cbCredibility) hist.cbCredibility = []
+  _pushHistory(hist.inflationExp, metrics.inflationExpectations * 100)
+  _pushHistory(hist.cbCredibility, metrics.centralBankCredibility * 100)
+
+  // Stock market metrics
+  metrics.publicCompanies = aliveBusinesses.filter(b => b.isPublic).length
+  metrics.totalMarketCap = aliveBusinesses
+    .filter(b => b.isPublic)
+    .reduce((s, b) => s + (b.sharePrice || 0) * (b.sharesOutstanding || 0), 0)
+  const publicBiz = aliveBusinesses.filter(b => b.isPublic && b.sharePrice > 0)
+  metrics.avgDividendYield = publicBiz.length > 0
+    ? publicBiz.reduce((s, b) => s + (b.dividendRate || 0), 0) / publicBiz.length
+    : 0
+  if (!hist.marketCap) hist.marketCap = []
+  _pushHistory(hist.marketCap, metrics.totalMarketCap)
+
+  // Trade & FX metrics (from global economy state)
+  const ge = state.globalEconomy
+  if (ge) {
+    metrics.fxRate = ge.fxRate
+    metrics.foreignReserves = ge.foreignReserves
+    const tb = ge.tradeBalance
+    metrics.tradeBalance = Object.values(tb).reduce((s, v) => s + v, 0)
+    metrics.exports = Object.values(tb).reduce((s, v) => s + Math.max(0, v), 0)
+    metrics.imports = Object.values(tb).reduce((s, v) => s + Math.abs(Math.min(0, v)), 0)
+  }
+  if (!hist.fxRate) hist.fxRate = []
+  if (!hist.tradeBalance) hist.tradeBalance = []
+  _pushHistory(hist.fxRate, metrics.fxRate)
+  _pushHistory(hist.tradeBalance, metrics.tradeBalance)
 
   return metrics
 }
@@ -140,8 +292,12 @@ function _computeGovSpending(agents, policies) {
 
   const healthcareSpend = policies.publicHealthcare ? agents.length * 0.5 : 0
   const educationSpend = agents.length * (policies.educationFunding || 0) * 0.2
+  const policeSpend = agents.length * (policies.policeFunding || 0) * 0.05
+  const oversightSpend = agents.length * (policies.financialOversight || 0) * 0.03
+  const prisonSpend = policies.prisonReform ? agents.filter(a => a.incarcerated).length * 0.02 : 0
+  const exportSubSpend = agents.length * (policies.exportSubsidies || 0) * 0.1
 
-  return benefitSpend + ubiSpend + healthcareSpend + educationSpend
+  return benefitSpend + ubiSpend + healthcareSpend + educationSpend + policeSpend + oversightSpend + prisonSpend + exportSubSpend
 }
 
 export function toMetricsSnapshot(metrics) {
@@ -162,7 +318,30 @@ export function toMetricsSnapshot(metrics) {
     population: metrics.population,
     businessCount: metrics.businessCount,
     govDebt: metrics.govDebt,
+    govInterestPayments: metrics.govInterestPayments,
     totalTaxRevenue: metrics.totalTaxRevenue,
+    crimeRate: metrics.crimeRate,
+    streetCrimeCount: metrics.streetCrimeCount,
+    corporateCrimeCount: metrics.corporateCrimeCount,
+    prisonPopulation: metrics.prisonPopulation,
+    totalPrivateDebt: metrics.totalPrivateDebt,
+    nonPerformingLoans: metrics.nonPerformingLoans,
+    avgCreditScore: metrics.avgCreditScore,
+    bankCount: metrics.bankCount,
+    mortgageRate: metrics.mortgageRate,
+    agentsInDebtSpiral: metrics.agentsInDebtSpiral,
+    avgDebtToIncome: metrics.avgDebtToIncome,
+    inflationExpectations: metrics.inflationExpectations,
+    centralBankCredibility: metrics.centralBankCredibility,
+    totalMarketCap: metrics.totalMarketCap,
+    publicCompanies: metrics.publicCompanies,
+    avgDividendYield: metrics.avgDividendYield,
+    pendingPolicyCount: metrics.pendingPolicyCount,
+    tradeBalance: metrics.tradeBalance,
+    fxRate: metrics.fxRate,
+    foreignReserves: metrics.foreignReserves,
+    exports: metrics.exports,
+    imports: metrics.imports,
     history: metrics.history
   }
 }

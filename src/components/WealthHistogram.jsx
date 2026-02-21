@@ -44,22 +44,27 @@ export default function WealthHistogram({ agents }) {
     <div className="flex flex-col gap-3">
       {/* Histogram */}
       <div>
-        <div className="text-[#64748b] text-xs uppercase tracking-wider font-mono mb-2">
+        <div className="text-[#64748b] text-[10px] uppercase tracking-wider font-mono mb-2">
           Wealth Distribution
         </div>
-        <div className="h-28">
+        <div className="h-32">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={histData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+            <BarChart data={histData} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 8, fill: '#475569', fontFamily: 'monospace' }}
+                tick={{ fontSize: 9, fill: '#475569', fontFamily: 'monospace' }}
                 axisLine={false}
                 tickLine={false}
+                interval={0}
+                angle={-25}
+                textAnchor="end"
+                height={28}
               />
               <YAxis
                 tick={{ fontSize: 8, fill: '#475569', fontFamily: 'monospace' }}
                 axisLine={false}
                 tickLine={false}
+                width={30}
               />
               <Tooltip
                 contentStyle={{ background: '#12121a', border: '1px solid #1e1e2e', fontSize: 10 }}
@@ -79,24 +84,25 @@ export default function WealthHistogram({ agents }) {
       {/* Lorenz curve */}
       {lorenzData.length > 2 && (
         <div>
-          <div className="text-[#64748b] text-xs uppercase tracking-wider font-mono mb-2">
+          <div className="text-[#64748b] text-[10px] uppercase tracking-wider font-mono mb-2">
             Lorenz Curve
           </div>
-          <div className="h-24">
+          <div className="h-28">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={lorenzData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+              <LineChart data={lorenzData} margin={{ top: 4, right: 8, bottom: 0, left: -10 }}>
                 <XAxis
                   dataKey="population"
-                  tick={{ fontSize: 8, fill: '#475569' }}
+                  tick={{ fontSize: 8, fill: '#475569', fontFamily: 'monospace' }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={v => v + '%'}
                 />
                 <YAxis
-                  tick={{ fontSize: 8, fill: '#475569' }}
+                  tick={{ fontSize: 8, fill: '#475569', fontFamily: 'monospace' }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={v => v + '%'}
+                  width={35}
                 />
                 {/* Perfect equality line */}
                 <Line

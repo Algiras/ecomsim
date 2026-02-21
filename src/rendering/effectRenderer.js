@@ -60,6 +60,47 @@ export function addEventEffect(x, y, color = '#f59e0b') {
   effects.push({ type: 'wave', x, y, radius: 10, maxRadius: 80, life: 1.0, color })
 }
 
+export function addRevolutionEffect(x, y) {
+  // Blood-red burst — execution or looting
+  for (let i = 0; i < 10; i++) {
+    const angle = Math.random() * Math.PI * 2
+    const speed = 1.5 + Math.random() * 3
+    effects.push({
+      type: 'sparkle',
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1.0,
+      color: Math.random() < 0.6 ? '#dc2626' : '#f97316',
+      size: 3 + Math.random() * 3
+    })
+  }
+  effects.push({ type: 'wave', x, y, radius: 8, maxRadius: 60, life: 1.0, color: '#dc2626' })
+}
+
+let _revolutionOverlayAlpha = 0
+let _revolutionActive = false
+
+export function setRevolutionActive(active) {
+  _revolutionActive = active
+}
+
+export function renderRevolutionOverlay(ctx, w, h) {
+  // Pulsing red tint overlay during revolution
+  if (_revolutionActive) {
+    _revolutionOverlayAlpha = Math.min(0.18, _revolutionOverlayAlpha + 0.005)
+  } else {
+    _revolutionOverlayAlpha = Math.max(0, _revolutionOverlayAlpha - 0.008)
+  }
+  if (_revolutionOverlayAlpha <= 0) return
+  const pulse = Math.sin(Date.now() / 600) * 0.5 + 0.5
+  ctx.save()
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.fillStyle = `rgba(220,38,38,${_revolutionOverlayAlpha * (0.5 + pulse * 0.5)})`
+  ctx.fillRect(0, 0, w, h)
+  ctx.restore()
+}
+
 export function renderEffects(ctx) {
   for (let i = effects.length - 1; i >= 0; i--) {
     const e = effects[i]
