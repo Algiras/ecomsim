@@ -91,14 +91,14 @@ function StoryCard({ chapter, storyProgress, onSelect }) {
 // ─── Main component ────────────────────────────────────────────────────────────
 
 const MODES = [
-  { id: 'freeplay', label: '🎮 Free Play', desc: 'No time limit. No objectives. Experiment freely.' },
   { id: 'tutorial', label: '🎓 Tutorial', desc: 'Learn by doing. Fix broken economies one policy at a time.' },
+  { id: 'story', label: '📖 Story Mode', desc: '5-chapter campaign through economic history.' },
   { id: 'historical', label: '📜 Historical', desc: 'Real crises. Can you do better than history?' },
-  { id: 'story', label: '📖 Story Mode', desc: '5-chapter campaign through economic history.' }
+  { id: 'freeplay', label: '🎮 Free Play', desc: 'No time limit. No objectives. Experiment freely.' }
 ]
 
 export default function ModeSelect({ onSelect, storyProgress, completedLessons = [] }) {
-  const [activeMode, setActiveMode] = useState('freeplay')
+  const [activeMode, setActiveMode] = useState('tutorial')
 
   const completedChapters = Object.keys(storyProgress?.scores || {}).length
   const totalChapters = STORY_CHAPTERS.length

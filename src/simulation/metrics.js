@@ -171,7 +171,7 @@ export function updateMetrics(metrics, state, market, policies) {
   metrics.crimeRate = metrics.population > 0 ? (totalCrimes / metrics.population) * 1000 : 0
   metrics.prisonPopulation = aliveAgents.filter(a => a.incarcerated).length
   // Clear crime log after metrics update (accumulates between updates)
-  state._crimeLog = []
+  if (state._crimeLog) state._crimeLog.length = 0
 
   // Crime history
   if (!hist.crime) hist.crime = []

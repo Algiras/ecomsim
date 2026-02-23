@@ -199,7 +199,44 @@ export const SCENARIOS = {
     lesson: 'Automation creates wealth but destroys jobs. UBI or retraining — which policy saves more people?'
   },
 
-  // ─── Historical crisis challenges ─────────────────────────────────────────
+  // ─── Historical crisis challenges (chronological order) ──────────────────
+
+  weimarHyperinflation: {
+    id: 'weimarHyperinflation',
+    name: 'Weimar Hyperinflation',
+    subtitle: 'A loaf of bread costs a wheelbarrow of cash.',
+    description: 'Post-WWI Germany is printing money to pay reparations. Inflation is doubling daily. The middle class is being wiped out. Can you stabilize the currency before society collapses?',
+    icon: '💹',
+    difficulty: 'Expert',
+    color: '#dc2626',
+    isHistorical: true,
+    era: '1921–1924 · Germany',
+    durationYears: 10,
+    policies: {
+      incomeTax: 0.15,
+      corporateTax: 0.10,
+      minWage: 0,
+      ubi: 0,
+      interestRate: 0.01,
+      antiMonopoly: false,
+      educationFunding: 0.2,
+      unemploymentBenefit: 0,
+      priceControlFood: true,
+      priceControlHousing: false,
+      printMoney: 40,
+      publicHealthcare: false,
+      wealthTax: 0,
+      openBorders: false,
+      subsidiesFarming: false
+    },
+    agentCount: 180,
+    businessCount: 15,
+    wealthMultiplier: 0.5,
+    wealthInequality: 1.8,
+    avgSkill: 0.45,
+    scheduledEvents: [],
+    lesson: 'Stopping hyperinflation requires cold turkey: halt money printing, issue new credible currency, accept short-term pain.'
+  },
 
   greatDepression: {
     id: 'greatDepression',
@@ -239,43 +276,6 @@ export const SCENARIOS = {
       { type: 'financialBubble', atTick: 80 }
     ],
     lesson: 'Austerity deepened the Depression. FDR\'s New Deal proved government spending could restart demand.'
-  },
-
-  weimarHyperinflation: {
-    id: 'weimarHyperinflation',
-    name: 'Weimar Hyperinflation',
-    subtitle: 'A loaf of bread costs a wheelbarrow of cash.',
-    description: 'Post-WWI Germany is printing money to pay reparations. Inflation is doubling daily. The middle class is being wiped out. Can you stabilize the currency before society collapses?',
-    icon: '💹',
-    difficulty: 'Expert',
-    color: '#dc2626',
-    isHistorical: true,
-    era: '1921–1924 · Germany',
-    durationYears: 10,
-    policies: {
-      incomeTax: 0.15,
-      corporateTax: 0.10,
-      minWage: 0,
-      ubi: 0,
-      interestRate: 0.01,
-      antiMonopoly: false,
-      educationFunding: 0.2,
-      unemploymentBenefit: 0,
-      priceControlFood: true,
-      priceControlHousing: false,
-      printMoney: 40,
-      publicHealthcare: false,
-      wealthTax: 0,
-      openBorders: false,
-      subsidiesFarming: false
-    },
-    agentCount: 180,
-    businessCount: 15,
-    wealthMultiplier: 0.5,
-    wealthInequality: 1.8,
-    avgSkill: 0.45,
-    scheduledEvents: [],
-    lesson: 'Stopping hyperinflation requires cold turkey: halt money printing, issue new credible currency, accept short-term pain.'
   },
 
   stagflation1970s: {
@@ -318,46 +318,6 @@ export const SCENARIOS = {
     lesson: 'Stagflation broke Keynesian consensus. Volcker\'s painful rate hikes eventually worked — but cost millions their jobs.'
   },
 
-  crisisOf2008: {
-    id: 'crisisOf2008',
-    name: '2008 Financial Crisis',
-    subtitle: 'Lehman just failed. The banks are frozen.',
-    description: 'The US housing bubble has burst. Banks are insolvent. Credit is frozen. The global economy is in freefall. Bail out the banks, let them fail, or something else?',
-    icon: '🏦',
-    difficulty: 'Hard',
-    color: '#7c3aed',
-    isHistorical: true,
-    era: '2008–2015 · Global',
-    durationYears: 10,
-    policies: {
-      incomeTax: 0.28,
-      corporateTax: 0.35,
-      minWage: 10,
-      ubi: 0,
-      interestRate: 0.05,
-      antiMonopoly: false,
-      educationFunding: 0.4,
-      unemploymentBenefit: 100,
-      priceControlFood: false,
-      priceControlHousing: false,
-      printMoney: 0,
-      publicHealthcare: false,
-      wealthTax: 0,
-      openBorders: false,
-      subsidiesFarming: false
-    },
-    agentCount: 200,
-    businessCount: 16,
-    wealthMultiplier: 0.7,
-    wealthInequality: 1.6,
-    avgSkill: 0.5,
-    scheduledEvents: [
-      { type: 'financialBubble', atTick: 1 },
-      { type: 'recession', atTick: 30 }
-    ],
-    lesson: 'Bailouts prevented a depression but rewarded recklessness. The political consequences lasted a decade.'
-  },
-
   japanLostDecade: {
     id: 'japanLostDecade',
     name: 'Japan\'s Lost Decade',
@@ -396,6 +356,46 @@ export const SCENARIOS = {
       { type: 'recession', atTick: 10 }
     ],
     lesson: 'Half-measures and zombie banks prolonged Japan\'s stagnation for 20 years. Swift, decisive action matters.'
+  },
+
+  crisisOf2008: {
+    id: 'crisisOf2008',
+    name: '2008 Financial Crisis',
+    subtitle: 'Lehman just failed. The banks are frozen.',
+    description: 'The US housing bubble has burst. Banks are insolvent. Credit is frozen. The global economy is in freefall. Bail out the banks, let them fail, or something else?',
+    icon: '🏦',
+    difficulty: 'Hard',
+    color: '#7c3aed',
+    isHistorical: true,
+    era: '2008–2015 · Global',
+    durationYears: 10,
+    policies: {
+      incomeTax: 0.28,
+      corporateTax: 0.35,
+      minWage: 10,
+      ubi: 0,
+      interestRate: 0.05,
+      antiMonopoly: false,
+      educationFunding: 0.4,
+      unemploymentBenefit: 100,
+      priceControlFood: false,
+      priceControlHousing: false,
+      printMoney: 0,
+      publicHealthcare: false,
+      wealthTax: 0,
+      openBorders: false,
+      subsidiesFarming: false
+    },
+    agentCount: 200,
+    businessCount: 16,
+    wealthMultiplier: 0.7,
+    wealthInequality: 1.6,
+    avgSkill: 0.5,
+    scheduledEvents: [
+      { type: 'financialBubble', atTick: 1 },
+      { type: 'recession', atTick: 30 }
+    ],
+    lesson: 'Bailouts prevented a depression but rewarded recklessness. The political consequences lasted a decade.'
   },
 
   nordicMiracle: {

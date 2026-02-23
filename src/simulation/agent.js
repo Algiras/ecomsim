@@ -725,6 +725,12 @@ export class Agent {
   _updateInflationExpectation(state) {
     const recentInflation = (state.market?.inflation || 0)
     this.inflationExpectation = this.inflationExpectation * 0.9 + recentInflation * 0.1
+    // Central bank rate signal: hawkish rates anchor expectations downward
+    const rate = state.policies?.interestRate || 0.05
+    if (rate > 0.05) {
+      const hawkishPull = (rate - 0.05) * 0.3
+      this.inflationExpectation -= hawkishPull * 0.1
+    }
     // If central bank credibility is low, expectations amplify (unanchored)
     const credibility = state.market?.centralBankCredibility ?? 1.0
     if (credibility < 0.5) {

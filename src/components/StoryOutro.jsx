@@ -1,4 +1,5 @@
 import { gradeChapter, closingNarrativeKey } from '../data/storyMode.js'
+import SharePanel from './SharePanel.jsx'
 
 function GradeRing({ grade, color }) {
   return (
@@ -42,6 +43,7 @@ export default function StoryOutro({ chapter, objectives = [], score, onNextChap
   const narrative = chapter.closingNarrative[narrativeKey]
 
   const paragraphs = narrative.trim().split('\n\n')
+  const shareText = `I completed Chapter ${chapter.number}: ${chapter.title} with grade ${grade} (${score}/100) in EconSim!`
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm">
@@ -111,6 +113,12 @@ export default function StoryOutro({ chapter, objectives = [], score, onNextChap
               → Chapter {chapter.number + 1}
             </button>
           )}
+        </div>
+
+        {/* Share */}
+        <div className="mt-3 pt-3 border-t border-[#1e1e2e]">
+          <div className="text-[10px] font-mono text-[#475569] uppercase tracking-wider mb-2">Share your result</div>
+          <SharePanel text={shareText} />
         </div>
       </div>
     </div>

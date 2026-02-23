@@ -76,6 +76,7 @@ function ChoiceCard({ choice, selected, onSelect }) {
 export default function EventChoiceModal({ event, onChoose }) {
   const [selected, setSelected] = useState(null)
   const [revealed, setRevealed] = useState(false)
+  const [hintVisible, setHintVisible] = useState(false)
 
   if (!event) return null
 
@@ -118,6 +119,29 @@ export default function EventChoiceModal({ event, onChoose }) {
             ))}
           </div>
         </div>
+
+        {/* Hint toggle */}
+        {event.hint && (
+          <div className="mb-4">
+            {!hintVisible ? (
+              <button
+                onClick={() => setHintVisible(true)}
+                className="text-xs font-mono text-[#6366f1] hover:text-[#818cf8] transition-colors"
+              >
+                💡 Need a hint?
+              </button>
+            ) : (
+              <div className="p-3 bg-[#1e1e2e] rounded-lg border border-[#6366f133]">
+                <div className="text-[#6366f1] text-[10px] uppercase tracking-wider font-mono mb-1">
+                  💡 Hint
+                </div>
+                <p className="text-[#94a3b8] text-xs leading-relaxed italic">
+                  {event.hint}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Historical note — revealed only after selection */}
         {revealed && selectedChoice && (

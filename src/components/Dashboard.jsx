@@ -8,7 +8,7 @@ import { PolicySlider, PolicyToggle } from './PolicyPanel.jsx'
 import ObjectivesPanel from './ObjectivesPanel.jsx'
 
 // ─── Policy grouping by section ────────────────────────────────────────────────
-const SECTION_POLICIES = {
+export const SECTION_POLICIES = {
   economy: ['interestRate', 'printMoney', 'helicopterMoney', 'exportSubsidies', 'foreignReserveIntervention', 'punitiveTargiffs'],
   fiscal: ['incomeTax', 'corporateTax', 'wealthTax', 'capitalGainsTax', 'subsidiesFarming'],
   inequality: ['minWage', 'ubi', 'unemploymentBenefit', 'openBorders', 'mandatoryProfitShare'],
@@ -155,18 +155,28 @@ function SectionPolicies({ policyIds, policies, onPolicyChange, policyLag, highl
 
 // ─── Section content render ────────────────────────────────────────────────────
 
-function SectionContent({ section, metrics, market, policies, onPolicyChange, policyLag, highlightPolicy }) {
+function SectionContent({ section, metrics, market, policies, onPolicyChange, policyLag, highlightPolicy, gameMode = 'freeplay', tutorialLesson = null }) {
   const history = metrics?.history || {}
   const allIds = SECTION_POLICIES[section] || []
 
-  const renderPolicies = () => (
-    <>
-      <div className="text-[9px] text-[#475569] font-mono uppercase tracking-wider mt-2 mb-0.5 px-1">
-        Policy Levers ({allIds.length})
-      </div>
-      <SectionPolicies policyIds={allIds} policies={policies} onPolicyChange={onPolicyChange} policyLag={policyLag} highlightPolicy={highlightPolicy} />
-    </>
-  )
+  // Determine which policy IDs to show based on game mode
+  const visibleIds = gameMode === 'tutorial' && tutorialLesson
+    ? allIds.filter(id => id === tutorialLesson.highlightPolicy)
+    : allIds
+
+  const showPolicies = gameMode !== 'story' && gameMode !== 'historical'
+
+  const renderPolicies = () => {
+    if (!showPolicies || visibleIds.length === 0) return null
+    return (
+      <>
+        <div className="text-[9px] text-[#475569] font-mono uppercase tracking-wider mt-2 mb-0.5 px-1">
+          Policy Levers ({visibleIds.length})
+        </div>
+        <SectionPolicies policyIds={visibleIds} policies={policies} onPolicyChange={onPolicyChange} policyLag={policyLag} highlightPolicy={highlightPolicy} />
+      </>
+    )
+  }
 
   switch (section) {
     case 'economy':
@@ -340,6 +350,7 @@ function TutorialLessonCard({ tutorialLesson, tutorialLessonIndex, tutorialTotal
 // ─── Main Dashboard ────────────────────────────────────────────────────────────
 
 export default function Dashboard({
+  gameMode = 'freeplay',
   metrics, market, activeEvents = [], approvalRating = 50, policyLag = {},
   policies, onPolicyChange, econFeed = [],
   agents, objectives, scenarioDurationYears, year, scenarioName,
@@ -351,10 +362,16 @@ export default function Dashboard({
   const scrollRef = useRef(null)
 
   // When tutorial lesson changes, switch to its section
+  // Handle sections not in SECTION_ORDER (e.g. 'crime' → 'public') by finding the tab containing the policy
   useEffect(() => {
-    if (tutorialLesson?.section && onSectionChange) {
-      onSectionChange(tutorialLesson.section)
+    if (!tutorialLesson?.section || !onSectionChange) return
+    let targetSection = tutorialLesson.section
+    if (!SECTION_POLICIES[targetSection] && tutorialLesson.highlightPolicy) {
+      for (const [sec, ids] of Object.entries(SECTION_POLICIES)) {
+        if (ids.includes(tutorialLesson.highlightPolicy)) { targetSection = sec; break }
+      }
     }
+    onSectionChange(targetSection)
   }, [tutorialLesson, onSectionChange])
 
   if (!metrics) return (
@@ -379,6 +396,18 @@ export default function Dashboard({
             onTutorialNext={onTutorialNext}
             onTutorialSkip={onTutorialSkip}
           />
+        )}
+
+        {/* Objectives — prominent in story/historical modes (shown at top) */}
+        {hasObjectives && (gameMode === 'story' || gameMode === 'historical') && (
+          <div className="border-b border-[#1e1e2e] pb-2">
+            <ObjectivesPanel
+              objectives={objectives}
+              scenarioDurationYears={scenarioDurationYears}
+              year={year}
+              scenarioName={scenarioName}
+            />
+          </div>
         )}
 
         {/* Year/Pop + lag */}
@@ -408,10 +437,12 @@ export default function Dashboard({
           onPolicyChange={onPolicyChange}
           policyLag={policyLag}
           highlightPolicy={tutorialLesson?.section === activeSection ? tutorialLesson.highlightPolicy : null}
+          gameMode={gameMode}
+          tutorialLesson={tutorialLesson}
         />
 
-        {/* Objectives (story mode) */}
-        {hasObjectives && (
+        {/* Objectives — in freeplay/tutorial at bottom */}
+        {hasObjectives && gameMode !== 'story' && gameMode !== 'historical' && (
           <div className="border-t border-[#1e1e2e] pt-2">
             <ObjectivesPanel
               objectives={objectives}

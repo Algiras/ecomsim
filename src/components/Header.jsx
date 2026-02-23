@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { SECTION_ORDER, SECTION_META } from './Dashboard.jsx'
+import { SECTION_ORDER, SECTION_META, SECTION_POLICIES } from './Dashboard.jsx'
+import SharePanel from './SharePanel.jsx'
 
 const SPEEDS = [
   { label: '1\u00d7', value: 1, title: 'Leisurely \u2014 watch the economy breathe' },
@@ -53,7 +54,22 @@ function sectionHealth(section, metrics, approvalRating) {
   }
 }
 
+// Map tutorial lesson sections to actual tab sections
+// (e.g. 'crime' lesson maps to 'public' tab where policeFunding lives)
+function tutorialTabSection(lesson) {
+  if (!lesson) return null
+  const section = lesson.section
+  // If section exists in SECTION_ORDER, use it; otherwise find the tab containing the policy
+  if (SECTION_ORDER.includes(section)) return section
+  // Fallback: find which section contains the highlighted policy
+  for (const [sec, ids] of Object.entries(SECTION_POLICIES)) {
+    if (ids.includes(lesson.highlightPolicy)) return sec
+  }
+  return null
+}
+
 export default function Header({
+  gameMode = 'freeplay',
   paused,
   speed,
   onPause,
@@ -76,10 +92,11 @@ export default function Header({
   onSectionChange,
   unlockedSections,
   metrics,
-  approvalRating
+  approvalRating,
+  tutorialLesson = null
 }) {
-  const [copied, setCopied] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const menuRef = useRef(null)
 
   // Close menu on outside click
@@ -92,14 +109,9 @@ export default function Header({
     return () => document.removeEventListener('mousedown', handler)
   }, [menuOpen])
 
-  const handleShare = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-    setMenuOpen(false)
-  }
+  const shareText = score !== undefined
+    ? `I scored ${score}/100 on ${scenarioName} in EconSim!`
+    : `Playing ${scenarioName} in EconSim!`
 
   return (
     <header className="flex items-center justify-between px-4 py-2 bg-[#0a0a0f] border-b border-[#1e1e2e] flex-wrap gap-2">
@@ -164,15 +176,17 @@ export default function Header({
           {paused ? '\u25b6 Play' : '\u23f8 Pause'}
         </button>
 
-        {/* Shock me */}
-        <button
-          onClick={onShockMe}
-          className="text-xs font-mono px-3 py-1.5 rounded border border-[#f59e0b33] text-[#f59e0b]
-            hover:bg-[#f59e0b11] transition-colors"
-          title="Trigger a random economic event"
-        >
-          ⚡ Shock
-        </button>
+        {/* Shock me — hidden in tutorial mode */}
+        {gameMode !== 'tutorial' && (
+          <button
+            onClick={onShockMe}
+            className="text-xs font-mono px-3 py-1.5 rounded border border-[#f59e0b33] text-[#f59e0b]
+              hover:bg-[#f59e0b11] transition-colors"
+            title="Trigger a random economic event"
+          >
+            ⚡ Shock
+          </button>
+        )}
 
         {/* Overflow menu */}
         <div className="relative" ref={menuRef}>
@@ -195,11 +209,16 @@ export default function Header({
               </button>
               {/* Share */}
               <button
-                onClick={handleShare}
+                onClick={() => setShareOpen(prev => !prev)}
                 className="w-full text-left text-xs font-mono px-3 py-2 text-[#64748b] hover:text-[#22c55e] hover:bg-[#22c55e11] transition-colors"
               >
-                {copied ? '\u2713 Copied!' : '\ud83d\udd17 Share'}
+                📤 Share
               </button>
+              {shareOpen && (
+                <div className="px-3 py-2 border-t border-[#1e1e2e]">
+                  <SharePanel text={shareText} compact />
+                </div>
+              )}
               {/* Narrator */}
               <button
                 onClick={() => { onNarratorToggle(); setMenuOpen(false) }}
@@ -221,13 +240,27 @@ export default function Header({
         </div>
       </div>
 
-      {/* Section tabs */}
+      {/* Section tabs — filtered by game mode */}
       <div className="flex flex-wrap gap-0.5 w-full pt-1 px-2">
-        {SECTION_ORDER.map(section => {
+        {SECTION_ORDER
+          .filter(section => {
+            // Tutorial: only show the tab for the current lesson's section
+            if (gameMode === 'tutorial' && tutorialLesson) {
+              const tutTab = tutorialTabSection(tutorialLesson)
+              return section === tutTab
+            }
+            return true
+          })
+          .map(section => {
           const meta = SECTION_META[section]
           const isActive = activeSection === section
-          const isLocked = !unlockedSections?.has(section)
+          // Story/Historical: all tabs unlocked; Freeplay: progressive unlock
+          const isLocked = (gameMode === 'story' || gameMode === 'historical')
+            ? false
+            : !unlockedSections?.has(section)
           const health = sectionHealth(section, metrics, approvalRating)
+          // Story/Historical: no health dots, just icon
+          const showHealthDot = gameMode !== 'story' && gameMode !== 'historical'
 
           return (
             <button
@@ -246,9 +279,9 @@ export default function Header({
             >
               {isLocked ? (
                 <span className="text-[#334155]">🔒</span>
-              ) : (
+              ) : showHealthDot ? (
                 <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: health }} />
-              )}
+              ) : null}
               <span>{meta.icon}</span>
               <span>{meta.title}</span>
             </button>
