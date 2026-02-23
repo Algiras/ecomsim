@@ -77,14 +77,17 @@ export const TUTORIAL_LESSONS = [
     section: 'fiscal',
     highlightPolicy: 'incomeTax',
     scenarioConfig: {
+      // printMoney removed — it inflated the economy enough to generate a surplus
+      // even at 3% tax, causing the debt to self-solve. With 0 printing and
+      // high spending (ubi, education, healthcare), the budget stays firmly negative.
       policies: {
-        printMoney: 8, interestRate: 0.05, incomeTax: 0.03, corporateTax: 0.02,
-        minWage: 10, ubi: 300, educationFunding: 0.9, unemploymentBenefit: 200,
+        printMoney: 0, interestRate: 0.05, incomeTax: 0.03, corporateTax: 0.02,
+        minWage: 10, ubi: 400, educationFunding: 0.9, unemploymentBenefit: 200,
         publicHealthcare: true, wealthTax: 0, policeFunding: 0.6,
         financialOversight: 0.3, reserveRequirement: 0.1, depositInsurance: true,
         maxLoanToValue: 0.8, antiMonopoly: false, openBorders: false, subsidiesFarming: true
       },
-      warmupTicks: 500,
+      warmupTicks: 200,
       startMetrics: { govDebt: 45000 },
       agentCount: 200,
       businessCount: 18,

@@ -29,11 +29,13 @@ export function applyPolicyEffects(state, policies, market) {
     }
   }
 
-  // Interest rate effects on business borrowing & investment
-  if (policies.interestRate > 0.1) {
-    // High rates suppress business formation
+  // Interest rate effects on business borrowing & investment.
+  // Only drain capital for the ABOVE-baseline portion (rate > 5%) so that the
+  // demand-suppression channel (market.js) dominates and CPI can actually fall.
+  const excessRate = Math.max(0, policies.interestRate - 0.05)
+  if (excessRate > 0) {
     for (const b of businesses.filter(b => b.alive)) {
-      b.capital -= b.capital * policies.interestRate * 0.001
+      b.capital -= b.capital * excessRate * 0.0002  // 10× lighter than before
     }
   }
 
