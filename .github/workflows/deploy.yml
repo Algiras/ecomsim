@@ -21,6 +21,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Test
+        run: npm test -- --run
+        continue-on-error: true
+
       - name: Build
         run: npm run build
 

@@ -116,15 +116,17 @@ describe('Agent._shouldDie', () => {
   })
 
   it('public healthcare reduces death chance', () => {
-    const agent = new Agent({ age: 70 * 52, health: 0.2 })
+    const agent = new Agent({ age: 70 * 52, health: 0 })
     let deathsNoHealth = 0
     let deathsHealth = 0
-    for (let i = 0; i < 100000; i++) {
+    const TRIALS = 1_000_000
+    for (let i = 0; i < TRIALS; i++) {
       if (agent._shouldDie({})) deathsNoHealth++
       if (agent._shouldDie({ publicHealthcare: true })) deathsHealth++
     }
-    // Healthcare should reduce deaths (multiplier is 0.5)
-    expect(deathsHealth).toBeLessThan(deathsNoHealth)
+    // Healthcare multiplier is 0.5 — with 1M trials the signal is clear
+    // Allow 20% margin so the test is robust against variance
+    expect(deathsHealth).toBeLessThan(deathsNoHealth * 0.8)
     expect(deathsHealth).toBeGreaterThan(0) // still some deaths
   })
 })
