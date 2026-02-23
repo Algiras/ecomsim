@@ -185,24 +185,6 @@ export default function App() {
             }
           }
           setSimState(state)
-          // Check tutorial conditions against metrics
-          if (state.metrics) {
-            setTutorialLessonIndex(prevIdx => {
-              if (prevIdx < 0 || prevIdx >= TUTORIAL_LESSONS.length) return prevIdx
-              const lesson = TUTORIAL_LESSONS[prevIdx]
-              const allMet = lesson.conditions.every(c => {
-                const val = c.metric ? state.metrics[c.metric] : state.policies?.[c.policy]
-                if (val === undefined) return false
-                if (c.op === 'gte') return val >= c.value
-                if (c.op === 'lte') return val <= c.value
-                if (c.op === 'gt') return val > c.value
-                if (c.op === 'lt') return val < c.value
-                return false
-              })
-              if (allMet) setTutorialComplete(true)
-              return prevIdx
-            })
-          }
           break
         case 'EVENT':
           if (narrator.llmReady) {
@@ -357,6 +339,23 @@ export default function App() {
     activeModelRef.current = config
     _resetSim('default', config)
   }, [tutorialLessonIndex, _resetSim])
+
+  // Check tutorial lesson conditions whenever simState updates
+  useEffect(() => {
+    if (tutorialComplete) return  // already done — don't re-evaluate
+    if (!simState?.metrics || tutorialLessonIndex < 0 || tutorialLessonIndex >= TUTORIAL_LESSONS.length) return
+    const lesson = TUTORIAL_LESSONS[tutorialLessonIndex]
+    const allMet = lesson.conditions.every(c => {
+      const val = c.metric ? simState.metrics[c.metric] : simState.policies?.[c.policy]
+      if (val === undefined) return false
+      if (c.op === 'gte') return val >= c.value
+      if (c.op === 'lte') return val <= c.value
+      if (c.op === 'gt') return val > c.value
+      if (c.op === 'lt') return val < c.value
+      return false
+    })
+    if (allMet) setTutorialComplete(true)
+  }, [simState, tutorialLessonIndex, tutorialComplete])
 
   // Auto-advance to next lesson after a brief delay when tutorial step is completed
   const handleTutorialNextRef = useRef(null)
