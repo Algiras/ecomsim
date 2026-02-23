@@ -14,7 +14,7 @@ self.onmessage = async (e) => {
       try {
         const { KokoroTTS } = await import('kokoro-js')
         tts = await KokoroTTS.from_pretrained(MODEL_ID, {
-          dtype: 'q4',
+          dtype: 'q8',   // 92MB vs 305MB for q4 — 3x smaller, faster load
           device: 'wasm'
         })
         self.postMessage({ type: 'READY', id })
