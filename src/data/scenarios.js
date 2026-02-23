@@ -92,6 +92,7 @@ export const SCENARIOS = {
     wealthMultiplier: 1.0,
     wealthInequality: 1.0,
     avgSkill: 0.5,
+    warmupTicks: 50,
     lesson: 'Every policy has tradeoffs. Start here and learn what each lever does.'
   },
 
@@ -126,6 +127,7 @@ export const SCENARIOS = {
     wealthMultiplier: 1.2,
     wealthInequality: 1.5,
     avgSkill: 0.5,
+    warmupTicks: 50,
     lesson: 'Natural monopolies emerge quickly. The rich get richer. But GDP grows fast at first.'
   },
 
@@ -160,6 +162,7 @@ export const SCENARIOS = {
     wealthMultiplier: 0.8,
     wealthInequality: 0.8,
     avgSkill: 0.55,
+    warmupTicks: 50,
     startMetrics: { govDebt: 30000 },
     lesson: 'Cutting programs causes pain now. Keeping them causes pain later. The political economy of austerity.'
   },
@@ -195,6 +198,7 @@ export const SCENARIOS = {
     wealthMultiplier: 1.0,
     wealthInequality: 1.0,
     avgSkill: 0.5,
+    warmupTicks: 50,
     scheduledEvents: [{ type: 'techBreakthrough', atTick: 200 }],
     lesson: 'Automation creates wealth but destroys jobs. UBI or retraining — which policy saves more people?'
   },
@@ -234,6 +238,7 @@ export const SCENARIOS = {
     wealthMultiplier: 0.5,
     wealthInequality: 1.8,
     avgSkill: 0.45,
+    warmupTicks: 50,
     scheduledEvents: [],
     lesson: 'Stopping hyperinflation requires cold turkey: halt money printing, issue new credible currency, accept short-term pain.'
   },
@@ -271,6 +276,7 @@ export const SCENARIOS = {
     wealthMultiplier: 0.35,
     wealthInequality: 2.0,
     avgSkill: 0.4,
+    warmupTicks: 50,
     scheduledEvents: [
       { type: 'recession', atTick: 1 },
       { type: 'financialBubble', atTick: 80 }
@@ -311,6 +317,7 @@ export const SCENARIOS = {
     wealthMultiplier: 0.85,
     wealthInequality: 1.1,
     avgSkill: 0.5,
+    warmupTicks: 50,
     scheduledEvents: [
       { type: 'cropFailure', atTick: 20 },
       { type: 'recession', atTick: 150 }
@@ -351,6 +358,7 @@ export const SCENARIOS = {
     wealthMultiplier: 0.9,
     wealthInequality: 0.9,
     avgSkill: 0.65,
+    warmupTicks: 50,
     scheduledEvents: [
       { type: 'financialBubble', atTick: 1 },
       { type: 'recession', atTick: 10 }
@@ -391,6 +399,7 @@ export const SCENARIOS = {
     wealthMultiplier: 0.7,
     wealthInequality: 1.6,
     avgSkill: 0.5,
+    warmupTicks: 50,
     scheduledEvents: [
       { type: 'financialBubble', atTick: 1 },
       { type: 'recession', atTick: 30 }
@@ -432,6 +441,7 @@ export const SCENARIOS = {
     wealthInequality: 0.7,
     avgSkill: 0.6,
     avgEducation: 0.65,
+    warmupTicks: 50,
     scheduledEvents: [],
     lesson: 'The Nordic model requires high institutional trust, universal services, AND open competitive markets. All three.'
   }
