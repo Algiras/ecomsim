@@ -77,25 +77,28 @@ export const TUTORIAL_LESSONS = [
     section: 'fiscal',
     highlightPolicy: 'incomeTax',
     scenarioConfig: {
-      // printMoney removed — it inflated the economy enough to generate a surplus
-      // even at 3% tax, causing the debt to self-solve. With 0 printing and
-      // high spending (ubi, education, healthcare), the budget stays firmly negative.
+      // corporateTax: 0 ensures ONLY income tax matters (corp tax on high-production
+      // businesses would create a surplus even at 3%, undermining the lesson).
+      // At 3% income tax: ~63/tick revenue < ~220/tick spending → deficit.
+      // At 35% income tax: ~739/tick revenue > ~220/tick spending → surplus.
       policies: {
-        printMoney: 0, interestRate: 0.05, incomeTax: 0.03, corporateTax: 0.02,
-        minWage: 10, ubi: 400, educationFunding: 0.9, unemploymentBenefit: 200,
-        publicHealthcare: true, wealthTax: 0, policeFunding: 0.6,
-        financialOversight: 0.3, reserveRequirement: 0.1, depositInsurance: true,
-        maxLoanToValue: 0.8, antiMonopoly: false, openBorders: false, subsidiesFarming: true
+        printMoney: 0, interestRate: 0.05, incomeTax: 0.03, corporateTax: 0,
+        minWage: 10, ubi: 100, educationFunding: 0.1, unemploymentBenefit: 0,
+        publicHealthcare: false, wealthTax: 0, policeFunding: 0.2,
+        financialOversight: 0.1, reserveRequirement: 0.1, depositInsurance: true,
+        maxLoanToValue: 0.8, antiMonopoly: false, openBorders: false, subsidiesFarming: false
       },
-      warmupTicks: 200,
+      warmupTicks: 150,
       startMetrics: { govDebt: 45000 },
       agentCount: 200,
-      businessCount: 18,
+      businessCount: 30,
       wealthMultiplier: 0.8,
       wealthInequality: 0.8,
       avgSkill: 0.5
     },
-    conditions: [{ metric: 'govDebt', op: 'lte', value: 3000 }],
+    // 20000 threshold: raises income tax must reduce debt by 55% (45k→20k).
+    // Achievable in ~2000 ticks at reasonable employment; demonstrates the policy effect.
+    conditions: [{ metric: 'govDebt', op: 'lte', value: 20000 }],
     successMessage: 'Raising taxes is politically painful but sometimes necessary to avoid sovereign default. In real life, austerity vs. stimulus is one of the biggest debates in economics.',
   },
   {
