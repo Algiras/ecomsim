@@ -243,10 +243,11 @@ describe('Agent._updateHappiness', () => {
   })
 
   it('public healthcare improves happiness', () => {
-    const noHealth = new Agent({ age: 30 * 52, wealth: 500 })
+    // Pin health to a fixed value so random initialization doesn't affect comparison
+    const noHealth = new Agent({ age: 30 * 52, wealth: 500, health: 0.8 })
     noHealth._updateHappiness(makeState(), {})
 
-    const withHealth = new Agent({ age: 30 * 52, wealth: 500 })
+    const withHealth = new Agent({ age: 30 * 52, wealth: 500, health: 0.8 })
     withHealth._updateHappiness(makeState(), { publicHealthcare: true })
 
     expect(withHealth.happiness).toBeGreaterThan(noHealth.happiness)

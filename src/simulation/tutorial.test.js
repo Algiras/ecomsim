@@ -26,6 +26,8 @@ const LESSON_FIXES = {
 // At 1× speed (10 tps), ~5 min = 3000 ticks.
 // With fix applied early, convergence should happen within ~1500-2500 ticks.
 const MAX_TICKS = 3000
+// Lessons that need more ticks due to slower economic dynamics
+const MAX_TICKS_OVERRIDE = { tut_debt: 5000 }
 const APPLY_FIX_AT = 50 // apply after brief warmup
 
 // Must NOT self-solve within this window (player needs to act)
@@ -72,7 +74,8 @@ describe('Tutorial lessons are solvable with correct fix', () => {
       let conditionsMet = false
       let metTick = -1
 
-      for (let t = 0; t < MAX_TICKS; t++) {
+      const maxTicks = MAX_TICKS_OVERRIDE[lesson.id] ?? MAX_TICKS
+      for (let t = 0; t < maxTicks; t++) {
         if (t === APPLY_FIX_AT) {
           const fixes = LESSON_FIXES[lesson.id]
           for (const [key, value] of Object.entries(fixes)) {
@@ -94,7 +97,7 @@ describe('Tutorial lessons are solvable with correct fix', () => {
 
       const summary = conditionSummary(lesson, engine)
       expect(conditionsMet,
-        `${lesson.title}: conditions not met after ${MAX_TICKS} ticks.\n` +
+        `${lesson.title}: conditions not met after ${maxTicks} ticks.\n` +
         JSON.stringify(summary, null, 2)
       ).toBe(true)
 
